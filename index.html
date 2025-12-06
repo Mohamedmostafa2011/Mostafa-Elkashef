@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr. Mostafa Elkashef | IG Math</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phone Input CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css" />
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: { dark: '#0f172a', primary: '#2563eb', light: '#eff6ff', accent: '#f59e0b' } },
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .spinner { border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 2px solid #fff; width: 16px; height: 16px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+
+        /* Phone Input Overrides */
+        .iti { width: 100%; }
+        .iti__tel-input { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; font-size: 0.875rem; width: 100%; height: 50px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden">
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- ================= AUTH SCREEN ================= -->
+    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div class="absolute inset-0 opacity-10" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+
+        <div class="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl relative overflow-hidden fade-in mx-4">
+            
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-50 text-brand-primary rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-blue-100 shadow-lg transform rotate-3">
+                    <i class="fas fa-square-root-variable"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900" id="auth-heading">Welcome Back!</h1>
+                <p class="text-slate-500 text-sm mt-1" id="auth-subheading">Log in to continue your progress.</p>
+            </div>
+
+            <div id="auth-form" class="space-y-5">
+                
+                <!-- STEP 1: PHONE & NAME -->
+                <div id="step-1">
+                    <!-- NAME FIELD (Hidden by default) -->
+                    <div id="name-container" class="hidden mb-4 transition-all duration-300">
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1 ml-1">Full Name</label>
+                        <input type="text" id="auth-name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-primary outline-none" placeholder="e.g. Ahmed Ali">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1 ml-1">Mobile Number</label>
+                        <input type="tel" id="auth-phone">
+                    </div>
+
+                    <!-- RECAPTCHA (Required by Google) -->
+                    <div id="recaptcha-container" class="mt-4 flex justify-center"></div>
+
+                    <button id="send-code-btn" class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 mt-6 flex justify-center items-center gap-2">
+                        <span>Continue</span> <i class="fas fa-arrow-right"></i>
+                    </button>
+
+                    <!-- TOGGLE LOGIN / SIGNUP -->
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-slate-500" id="toggle-text">
+                            Don't have an account? <span onclick="toggleAuthMode()" class="text-brand-primary font-bold cursor-pointer hover:underline">Create one!</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- STEP 2: OTP VERIFICATION -->
+                <div id="step-2" class="hidden">
+                    <div class="text-center mb-6">
+                        <p class="text-sm text-slate-500">We sent a code to your phone.</p>
+                        <p class="text-xs text-brand-primary font-bold mt-1 cursor-pointer" onclick="resetAuth()">Wrong number?</p>
+                    </div>
+
+                    <div class="flex justify-center mb-6">
+                        <input type="text" id="auth-code" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-lg text-center font-bold tracking-[0.5em] focus:border-brand-primary outline-none" placeholder="000000" maxlength="6">
+                    </div>
+
+                    <button id="verify-btn" class="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-200">
+                        Verify & Access
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP SCREEN -->
+    <div id="app-screen" class="hidden flex h-screen w-full relative">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 flex flex-col shadow-xl md:shadow-none">
+            <div class="h-16 flex items-center px-6 border-b border-slate-100 gap-3">
+                <div class="w-8 h-8 bg-brand-primary text-white rounded flex items-center justify-center font-bold"><i class="fas fa-calculator"></i></div>
+                <span class="font-bold text-slate-900 tracking-tight">IG Math Pro</span>
+            </div>
+            <div class="p-6 text-center">
+                <p class="text-sm text-slate-500">Logged in as:</p>
+                <h3 id="sidebar-user-name" class="font-bold text-lg">User</h3>
+                <span id="sidebar-user-role" class="text-xs bg-blue-100 text-brand-primary px-2 py-1 rounded mt-2 inline-block">Student</span>
+            </div>
+            <div class="mt-auto p-4 border-t border-slate-100">
+                <button id="logout-btn" class="w-full bg-red-50 text-red-500 py-2 rounded font-bold text-sm">Log Out</button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col md:ml-64 min-w-0">
+            <header class="h-16 bg-white/80 backdrop-blur border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden p-2 text-slate-600"><i class="fas fa-bars"></i></button>
+                    <h2 class="text-lg font-bold text-slate-800">Dashboard</h2>
+                </div>
+            </header>
+            <div id="main-view" class="flex-1 overflow-y-auto p-8">
+                <div class="text-center mt-10">
+                    <h2 class="text-2xl font-bold text-slate-800">Welcome to the Platform!</h2>
+                    <p class="text-slate-500 mt-2">Your account is active and working.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, getDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBSO1WWLoQkWgtpGGhHV6MCegePEErijO0",
+            authDomain: "mostafa-elkashef.firebaseapp.com",
+            projectId: "mostafa-elkashef",
+            storageBucket: "mostafa-elkashef.firebasestorage.app",
+            messagingSenderId: "1029862762774",
+            appId: "1:1029862762774:web:b8852c7e0be74b1ca88837"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        auth.useDeviceLanguage();
+
+        // --- UI STATE ---
+        let isSignUpMode = false; // Start with Login
+        window.confirmationResult = null;
+
+        // --- PHONE INPUT ---
+        const phoneInput = window.intlTelInput(document.querySelector("#auth-phone"), {
+            initialCountry: "eg",
+            preferredCountries: ["eg", "sa", "ae", "us"],
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js",
+            separateDialCode: true,
+        });
+
+        // --- TOGGLE LOGIN / SIGNUP ---
+        window.toggleAuthMode = function() {
+            isSignUpMode = !isSignUpMode;
+            const nameBox = document.getElementById('name-container');
+            const title = document.getElementById('auth-heading');
+            const sub = document.getElementById('auth-subheading');
+            const toggleTxt = document.getElementById('toggle-text');
+
+            if (isSignUpMode) {
+                // Switch to Sign Up
+                nameBox.classList.remove('hidden');
+                title.innerText = "Create Account";
+                sub.innerText = "Fill in your details to join.";
+                toggleTxt.innerHTML = `Already have an account? <span onclick="toggleAuthMode()" class="text-brand-primary font-bold cursor-pointer hover:underline">Log In</span>`;
+            } else {
+                // Switch to Login
+                nameBox.classList.add('hidden');
+                title.innerText = "Welcome Back!";
+                sub.innerText = "Log in to continue your progress.";
+                toggleTxt.innerHTML = `Don't have an account? <span onclick="toggleAuthMode()" class="text-brand-primary font-bold cursor-pointer hover:underline">Create one!</span>`;
+            }
+        };
+
+        // --- RECAPTCHA ---
+        window.setupRecaptcha = () => {
+            if(!window.recaptchaVerifier) {
+                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    'size': 'invisible',
+                    'callback': () => {}
+                });
+            }
+        };
+        setTimeout(window.setupRecaptcha, 1000);
+
+        // --- SEND SMS ---
+        document.getElementById('send-code-btn').addEventListener('click', () => {
+            // 1. Check Name if Signing Up
+            if (isSignUpMode) {
+                const name = document.getElementById('auth-name').value;
+                if (!name) return showToast("Please enter your Full Name", "error");
+            }
+
+            // 2. Check Phone
+            if (!phoneInput.isValidNumber()) {
+                return showToast("Invalid Phone Number", "error");
+            }
+
+            const btn = document.getElementById('send-code-btn');
+            btn.innerHTML = '<span class="spinner"></span> Sending SMS...';
+            btn.disabled = true;
+
+            const fullPhone = phoneInput.getNumber();
+
+            signInWithPhoneNumber(auth, fullPhone, window.recaptchaVerifier)
+                .then((result) => {
+                    window.confirmationResult = result;
+                    showToast("Code sent to " + fullPhone);
+                    document.getElementById('step-1').classList.add('hidden');
+                    document.getElementById('step-2').classList.remove('hidden');
+                }).catch((error) => {
+                    console.error("Firebase Error:", error);
+                    let msg = "SMS Failed. ";
+                    
+                    // DETAILED ERROR HANDLING
+                    if (error.code === 'auth/internal-error') msg += "Domain not authorized in Firebase Console.";
+                    else if (error.code === 'auth/invalid-phone-number') msg += "Invalid phone number.";
+                    else if (error.code === 'auth/quota-exceeded') msg += "SMS Quota exceeded.";
+                    else msg += error.message;
+
+                    showToast(msg, "error");
+                    
+                    // Reset Button
+                    btn.innerHTML = `<span>Continue</span> <i class="fas fa-arrow-right"></i>`;
+                    btn.disabled = false;
+                    if(window.recaptchaVerifier) window.recaptchaVerifier.clear();
+                    window.setupRecaptcha();
+                });
+        });
+
+        // --- VERIFY OTP ---
+        document.getElementById('verify-btn').addEventListener('click', () => {
+            const code = document.getElementById('auth-code').value;
+            if (!code) return showToast("Enter the code", "error");
+
+            const btn = document.getElementById('verify-btn');
+            btn.innerHTML = '<span class="spinner"></span> Verifying...';
+
+            window.confirmationResult.confirm(code).then((result) => {
+                showToast("Success! Logging in...");
+            }).catch((error) => {
+                showToast("Incorrect Code", "error");
+                btn.innerText = "Verify & Access Platform";
+            });
+        });
+
+        // --- AUTH OBSERVER ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // HIDE AUTH, SHOW APP
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+
+                try {
+                    const docRef = doc(db, "users", user.uid);
+                    const docSnap = await getDoc(docRef);
+
+                    let userData;
+
+                    if (docSnap.exists()) {
+                        // Existing User
+                        userData = docSnap.data();
+                        if(isSignUpMode) showToast("Account already existed. Logged in.");
+                    } else {
+                        // New User (Create Profile)
+                        const name = document.getElementById('auth-name').value || "Student";
+                        // Hardcoded Admin check for your specific test number
+                        const role = user.phoneNumber === '+11234567890' ? 'admin' : 'student';
+
+                        userData = {
+                            name: name,
+                            phone: user.phoneNumber,
+                            role: role,
+                            uid: user.uid,
+                            createdAt: new Date().toISOString()
+                        };
+                        await setDoc(docRef, userData);
+                        showToast("Account Created Successfully!");
+                    }
+
+                    // Update Sidebar
+                    document.getElementById('sidebar-user-name').innerText = userData.name;
+                    document.getElementById('sidebar-user-role').innerText = userData.role === 'admin' ? 'Instructor' : 'Student';
+
+                } catch (e) {
+                    console.error("Profile Error:", e);
+                }
+
+            } else {
+                // SHOW AUTH, HIDE APP
+                document.getElementById('auth-screen').classList.remove('hidden');
+                document.getElementById('app-screen').classList.add('hidden');
+                window.resetAuth();
+            }
+        });
+
+        // --- UTILS ---
+        window.resetAuth = function() {
+            document.getElementById('step-1').classList.remove('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('send-code-btn').innerHTML = `<span>Continue</span> <i class="fas fa-arrow-right"></i>`;
+            document.getElementById('send-code-btn').disabled = false;
+            document.getElementById('auth-code').value = "";
+            if(window.recaptchaVerifier) window.recaptchaVerifier.clear();
+            window.setupRecaptcha();
+        };
+
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+        
+        // Sidebar Toggle
+        const sb = document.getElementById('sidebar');
+        function toggleSidebar() { sb.classList.toggle('-translate-x-full'); }
+
+        function showToast(msg, type = 'success') {
+            const c = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `${type === 'error' ? 'bg-red-500' : 'bg-emerald-600'} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 text-sm font-bold min-w-[280px] fade-in`;
+            el.innerHTML = `<i class="fas ${type === 'error' ? 'fa-times' : 'fa-check'}"></i> ${msg}`;
+            c.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
+        }
+    </script>
+</body>
+</html>
