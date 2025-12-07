@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mr. Mostafa Elkashef | IG Math</title>
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phone Input CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css" />
 
     <script>
@@ -15,139 +20,216 @@
             theme: {
                 extend: {
                     colors: { 
-                        brand: { dark: '#0f172a', primary: '#2563eb', secondary: '#4f46e5', accent: '#f59e0b' },
-                        surface: '#f8fafc',
-                        glass: 'rgba(255, 255, 255, 0.9)'
+                        brand: { dark: '#0f172a', primary: '#2563eb', secondary: '#4338ca', accent: '#f59e0b' },
+                        surface: '#f8fafc'
                     },
                     fontFamily: { 
-                        sans: ['Outfit', 'sans-serif'], 
-                        mono: ['JetBrains Mono', 'monospace'] 
+                        sans: ['Plus Jakarta Sans', 'sans-serif'], 
+                        display: ['Outfit', 'sans-serif'] 
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .font-display { font-family: 'Outfit', sans-serif; }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .hidden { display: none !important; }
         
-        /* --- MATH PATTERNS --- */
-        .bg-grid-pattern {
-            background-image: linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
-            background-size: 24px 24px;
+        /* --- MODERN PHONE INPUT OVERRIDES --- */
+        .iti { width: 100%; display: block; }
+        .iti__tel-input { 
+            background-color: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 0.75rem; 
+            font-size: 0.875rem; 
+            width: 100%; 
+            height: 52px; 
+            padding-left: 90px !important;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: #334155;
         }
+        .iti__tel-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); outline: none; }
         
-        /* --- CARD STYLES --- */
-        .course-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .course-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        /* --- MATH PATTERN BACKGROUNDS --- */
+        .bg-math-grid { background-image: radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px); background-size: 24px 24px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
         
-        /* Phone Input Fixes */
-        .iti { width: 100%; }
-        .iti__tel-input { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.75rem; height: 52px; }
+        /* Tab Styling */
+        .tab-btn.active { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
         
-        /* Tabs */
-        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; background: #eff6ff; }
+        /* Loader */
+        .spinner { border: 3px solid rgba(203, 213, 225, 0.3); border-radius: 50%; border-top: 3px solid #2563eb; width: 24px; height: 24px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
 <body class="bg-surface text-slate-800 h-screen overflow-hidden selection:bg-brand-primary selection:text-white">
 
     <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
-    <!-- AUTH SCREEN (UNCHANGED) -->
+    <!-- ================= AUTH SCREEN ================= -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div class="absolute inset-0 opacity-10" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+
         <div class="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-2xl relative overflow-hidden fade-in mx-4 max-h-[95vh] overflow-y-auto">
+            
+            <!-- TABS -->
             <div class="flex p-1 bg-slate-100 rounded-xl mb-8">
                 <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg shadow-sm bg-white text-brand-primary transition-all">Login</button>
                 <button onclick="switchTab('signup')" id="tab-signup" class="flex-1 py-2.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Sign Up</button>
             </div>
-            <div class="text-center mb-8"><h1 class="text-2xl font-bold text-slate-900" id="auth-title">Welcome Back</h1></div>
+
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-brand-primary text-white rounded-2xl text-2xl mb-3 shadow-lg shadow-blue-200 transform -rotate-3">
+                    <i class="fas fa-square-root-variable"></i>
+                </div>
+                <h1 class="text-2xl font-display font-bold text-slate-900 tracking-tight" id="auth-title">Welcome Back</h1>
+            </div>
+
+            <!-- 1. LOGIN FORM -->
             <div id="login-form" class="space-y-5">
-                <input type="tel" id="login-phone">
-                <input type="password" id="login-pass" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none" placeholder="Password">
-                <button id="btn-login" class="w-full bg-brand-primary text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-xl">Log In</button>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <input type="tel" id="login-phone">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Password</label>
+                    <input type="password" id="login-pass" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="••••••••">
+                </div>
+                <button id="btn-login" class="w-full bg-brand-primary text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-xl shadow-blue-200 active:scale-[0.98]">
+                    Log In
+                </button>
             </div>
+
+            <!-- 2. SIGN UP FORM -->
             <div id="signup-form" class="space-y-5 hidden">
-                <input type="text" id="reg-name" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none" placeholder="Full Name">
-                <div class="relative">
-                    <select id="reg-course" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none"><option value="" disabled selected>Loading...</option></select>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Full Name</label>
+                    <input type="text" id="reg-name" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none" placeholder="e.g. Ahmed Ali">
                 </div>
+
+                <!-- COURSE SELECTION -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Select Course</label>
+                    <div class="relative">
+                        <select id="reg-course" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:border-brand-primary outline-none appearance-none cursor-pointer">
+                            <option value="" disabled selected>Loading Courses...</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONDITIONAL CODE FIELD -->
                 <div id="course-code-field" class="hidden bg-amber-50 p-4 rounded-xl border border-amber-100">
-                    <label class="text-xs font-bold text-amber-600 uppercase mb-1 block">Group Code</label>
-                    <input type="text" id="reg-code" class="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-lg text-sm font-bold uppercase tracking-widest">
+                    <label class="text-xs font-bold text-amber-600 uppercase mb-1 block"><i class="fas fa-lock mr-1"></i> Group Code Required</label>
+                    <input type="text" id="reg-code" class="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-lg text-sm font-bold text-amber-800 placeholder-amber-300 focus:ring-2 focus:ring-amber-100 outline-none uppercase tracking-widest" placeholder="e.g. 10A">
                 </div>
-                <input type="tel" id="reg-phone">
-                <input type="password" id="reg-pass" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none" placeholder="Password">
-                <button id="btn-create-account" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition shadow-xl">Create Account</button>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <input type="tel" id="reg-phone">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Create Password</label>
+                    <input type="password" id="reg-pass" class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none" placeholder="Min. 6 characters">
+                </div>
+                <button id="btn-create-account" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition shadow-xl active:scale-[0.98]">
+                    Create Account
+                </button>
+                <p class="text-[10px] text-slate-400 text-center">Admin approval required for access.</p>
             </div>
         </div>
     </div>
 
-    <!-- PENDING SCREEN (UNCHANGED) -->
+    <!-- ================= PENDING SCREEN ================= -->
     <div id="pending-screen" class="fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-50 hidden text-center p-6">
-        <h1 class="text-3xl font-bold text-slate-900 mb-2">Approval Pending</h1>
-        <p class="text-slate-500 mb-8">Contact Mr. Mostafa to activate your account.</p>
+        <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-4xl mb-6 shadow-xl text-amber-500 animate-pulse">
+            <i class="fas fa-hourglass-half"></i>
+        </div>
+        <h1 class="text-3xl font-display font-bold text-slate-900 mb-2">Approval Pending</h1>
+        <p class="text-slate-500 max-w-sm mb-8 leading-relaxed">
+            Your account has been created! Please contact <b class="text-slate-800">Mr. Mostafa</b> to verify your enrollment and activate your access.
+        </p>
         <div class="flex gap-3">
-            <button onclick="location.reload()" class="bg-brand-primary text-white px-6 py-2.5 rounded-lg font-bold">Refresh</button>
-            <button id="logout-pending" class="text-red-500 font-bold text-sm">Log Out</button>
+            <button onclick="location.reload()" class="bg-brand-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-lg hover:bg-blue-600">Refresh Status</button>
+            <button id="logout-pending" class="bg-white border border-slate-200 text-red-500 px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-red-50">Log Out</button>
         </div>
     </div>
 
-    <!-- MAIN APP -->
-    <div id="app-screen" class="hidden flex h-screen w-full relative bg-surface">
-        
+    <!-- ================= APP SCREEN ================= -->
+    <div id="app-screen" class="hidden flex h-screen w-full relative">
         <!-- SIDEBAR -->
         <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 flex flex-col shadow-2xl md:shadow-none">
             <div class="h-20 flex items-center px-6 gap-3 border-b border-slate-50">
-                <div class="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-bold text-lg"><i class="fas fa-cube"></i></div>
-                <span class="font-bold text-slate-900 tracking-tight">IG Math Pro</span>
+                <div class="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-200"><i class="fas fa-cube"></i></div>
+                <div>
+                    <h1 class="font-display font-bold text-slate-900 text-lg leading-none">IG Math</h1>
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Platform</span>
+                </div>
                 <button id="close-sidebar" class="md:hidden ml-auto text-slate-400"><i class="fas fa-times"></i></button>
             </div>
             <nav id="nav-links" class="flex-1 p-4 space-y-1 overflow-y-auto"></nav>
-            <div class="p-4 border-t border-slate-50"><button id="logout-btn" class="w-full text-slate-500 hover:text-red-600 font-bold py-2 text-sm">Log Out</button></div>
+            <div class="p-4 border-t border-slate-50">
+                <button id="logout-btn" class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold py-3 transition">
+                    <i class="fas fa-sign-out-alt"></i> Log Out
+                </button>
+            </div>
         </aside>
 
-        <main class="flex-1 flex flex-col md:ml-72 min-w-0">
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col md:ml-72 min-w-0 bg-surface">
             <header class="h-20 bg-white/80 backdrop-blur border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-30">
-                <button id="open-sidebar" class="md:hidden p-2 text-slate-600"><i class="fas fa-bars text-xl"></i></button>
+                <button id="open-sidebar" class="md:hidden p-2 -ml-2 text-slate-600"><i class="fas fa-bars text-xl"></i></button>
                 <div class="ml-auto flex items-center gap-4">
                     <div class="text-right hidden sm:block">
-                        <p id="header-user" class="text-sm font-bold text-slate-900">...</p>
-                        <p id="header-role" class="text-xs text-slate-500">...</p>
+                        <p id="header-user" class="text-sm font-bold text-slate-900">Loading...</p>
+                        <p id="header-role" class="text-xs text-slate-500 font-medium">...</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 p-0.5">
+                        <div class="w-full h-full bg-white rounded-full flex items-center justify-center text-brand-primary font-bold text-lg">
+                            <i class="fas fa-user"></i>
+                        </div>
                     </div>
                 </div>
             </header>
             
-            <!-- DYNAMIC CONTENT AREA -->
-            <div id="main-view" class="flex-1 overflow-y-auto p-6 md:p-10 bg-slate-50 bg-grid-pattern relative">
-                <!-- Views injected here -->
-            </div>
+            <!-- DYNAMIC VIEWS -->
+            <div id="main-view" class="flex-1 overflow-y-auto p-6 md:p-10"></div>
         </main>
         <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
     </div>
 
-    <!-- COURSE MODAL (UNCHANGED) -->
+    <!-- ================= CREATE/EDIT COURSE MODAL ================= -->
     <div id="course-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
         <div class="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-slate-900" id="modal-title">Create Course</h3>
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-xl font-display font-bold text-slate-900" id="modal-title">Create New Course</h3>
                 <button onclick="toggleCourseModal()" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
             </div>
             <div class="p-6 space-y-5">
                 <input type="hidden" id="edit-course-id">
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Course Title</label>
-                    <input type="text" id="new-course-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary" placeholder="e.g. Calculus 101">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Course Title</label>
+                    <input type="text" id="new-course-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. IGCSE Year 10">
                 </div>
                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                    <label class="text-xs font-bold text-brand-primary uppercase block mb-2">Subcourses (Optional)</label>
-                    <div id="subcourse-container" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                    <label class="text-xs font-bold text-brand-primary uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-layer-group"></i> Subcourses (Optional)
+                    </label>
+                    <p class="text-[10px] text-blue-400 mb-3">Type codes for groups (e.g. "10A").</p>
+                    <div id="subcourse-container" class="space-y-2 max-h-40 overflow-y-auto pr-2"></div>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="saveNewCourse()" class="flex-1 bg-brand-dark text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 shadow-lg">Save Course</button>
-                    <button onclick="deleteCourse()" id="btn-delete-course" class="hidden px-4 bg-red-50 border border-red-100 text-red-500 font-bold rounded-xl"><i class="fas fa-trash"></i></button>
+                    <button onclick="handleSaveCourse()" class="flex-1 bg-brand-dark text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition shadow-lg">Save Course</button>
+                    <button onclick="handleDeleteCourse()" id="btn-delete-course" class="hidden px-4 bg-red-50 border border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-100 transition"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
@@ -174,15 +256,15 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const itiConfig = { initialCountry: "eg", preferredCountries: ["eg", "sa", "ae"], utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js", separateDialCode: true };
+        const itiConfig = { initialCountry: "eg", preferredCountries: ["eg", "sa", "ae", "kw", "us"], utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js", separateDialCode: true };
         const loginPhone = window.intlTelInput(document.querySelector("#login-phone"), itiConfig);
         const regPhone = window.intlTelInput(document.querySelector("#reg-phone"), itiConfig);
 
         let currentUserData = null;
         let availableCourses = [];
-        let activeCourseContext = null; // Stores {courseId, subcode, title}
+        let activeCourseContext = null;
 
-        // --- AUTH LOGIC (Same as before) ---
+        // --- AUTH LOGIC ---
         window.switchTab = async (tab) => {
             if(tab === 'login') {
                 document.getElementById('login-form').classList.remove('hidden');
@@ -198,6 +280,7 @@
 
         async function loadCoursesForSignup() {
             const select = document.getElementById('reg-course');
+            select.innerHTML = '<option disabled selected>Loading...</option>';
             const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt")));
             select.innerHTML = '<option value="" disabled selected>Select Your Course</option>';
             availableCourses = [];
@@ -216,15 +299,18 @@
         document.getElementById('btn-login').onclick = async () => {
             const pass = document.getElementById('login-pass').value;
             if(!loginPhone.isValidNumber()) return showToast("Invalid Phone", "error");
-            try { await signInWithEmailAndPassword(auth, loginPhone.getNumber().replace('+','')+"@igmath.com", pass); } catch(e) { showToast("Login Failed", "error"); }
+            try { await signInWithEmailAndPassword(auth, loginPhone.getNumber().replace('+','')+"@igmath.com", pass); } 
+            catch(e) { showToast("Login Failed. Check details.", "error"); }
         };
 
         document.getElementById('btn-create-account').onclick = async () => {
             const name = document.getElementById('reg-name').value;
             const pass = document.getElementById('reg-pass').value;
             const courseId = document.getElementById('reg-course').value;
-            if(!name || !pass || !courseId) return showToast("All fields required", "error");
             
+            if(!name || !pass || !courseId) return showToast("Fill all fields", "error");
+            if(!regPhone.isValidNumber()) return showToast("Invalid Phone", "error");
+
             const course = availableCourses.find(c => c.id === courseId);
             let subcourseCode = null;
             if(course && course.subcourses && course.subcourses.length > 0) {
@@ -268,7 +354,7 @@
             }
         });
 
-        // --- ADMIN HOME (THE GRID) ---
+        // --- ADMIN: COURSE GRID (Oldest First) ---
         window.renderAdminHome = async () => {
             document.getElementById('nav-links').innerHTML = `
                 <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-th-large"></i> Courses</button>
@@ -276,41 +362,47 @@
             `;
 
             const container = document.getElementById('main-view');
-            // Sort: CreatedAt ASC (Oldest First)
+            container.innerHTML = '<div class="flex justify-center h-64 items-center"><span class="spinner border-slate-300 border-t-brand-primary w-8 h-8"></span></div>';
+
+            // Sort: Oldest First (asc)
             const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt", "asc")));
             
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
-                    <!-- ADD NEW CARD -->
+                    <!-- CREATE BUTTON -->
                     <div onclick="openModalForCreate()" class="border-2 border-dashed border-slate-300 rounded-[2rem] h-64 flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-blue-50/50 transition group">
                         <div class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition"><i class="fas fa-plus text-2xl text-brand-primary"></i></div>
                         <h3 class="font-bold text-slate-500 group-hover:text-brand-primary">Create New Course</h3>
                     </div>
             `;
 
-            const mathIcons = ['fa-square-root-variable', 'fa-calculator', 'fa-infinity', 'fa-chart-pie', 'fa-superscript'];
+            const icons = ['fa-square-root-variable', 'fa-chart-pie', 'fa-calculator', 'fa-superscript', 'fa-infinity'];
 
-            snap.forEach((doc, index) => {
+            snap.forEach((doc, i) => {
                 const c = doc.data();
-                const icon = mathIcons[index % mathIcons.length];
                 const safeCourse = encodeURIComponent(JSON.stringify({id: doc.id, ...c}));
+                const icon = icons[i % icons.length];
                 
                 html += `
-                    <div class="course-card relative h-64 rounded-[2rem] overflow-hidden shadow-lg p-6 flex flex-col justify-between cursor-pointer text-white" style="background: ${c.theme}" onclick="handleCardClick('${doc.id}', ${c.subcourses ? c.subcourses.length : 0})">
-                        <!-- Settings (Z-Index Higher) -->
-                        <button onclick="openModalForEdit('${safeCourse}', event)" class="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white text-white hover:text-brand-dark rounded-full flex items-center justify-center backdrop-blur transition z-20"><i class="fas fa-cog"></i></button>
+                    <div class="relative h-64 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition hover:scale-[1.02] text-white p-6 flex flex-col justify-between group" style="background: ${c.theme}">
+                        <div class="absolute inset-0 bg-math-grid opacity-20"></div>
+                        <div class="absolute -right-4 -bottom-8 text-[100px] opacity-10 transform rotate-12"><i class="fas ${icon}"></i></div>
                         
-                        <!-- Decoration -->
-                        <div class="absolute -right-6 -bottom-10 opacity-20 text-[120px]"><i class="fas ${icon}"></i></div>
-                        
-                        <div class="relative z-10">
-                            ${c.subcourses && c.subcourses.length > 0 ? `<span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-white/30">${c.subcourses.length} Groups</span>` : '<span class="opacity-0">.</span>'}
-                            <h3 class="text-3xl font-bold mt-4 leading-tight drop-shadow-md">${c.title}</h3>
+                        <!-- SETTINGS BUTTON -->
+                        <button onclick="openModalForEdit('${safeCourse}', event)" class="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white text-white hover:text-brand-dark rounded-full flex items-center justify-center backdrop-blur transition z-20">
+                            <i class="fas fa-cog"></i>
+                        </button>
+
+                        <!-- CLICK AREA -->
+                        <div class="absolute inset-0 z-10 cursor-pointer" onclick="enterCourseLogic('${doc.id}', ${c.subcourses ? c.subcourses.length : 0})"></div>
+
+                        <div class="relative z-0 mt-4">
+                            ${c.subcourses && c.subcourses.length > 0 ? `<span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-white/30">${c.subcourses.length} Groups</span>` : ''}
+                            <h3 class="text-3xl font-display font-bold mt-3 drop-shadow-md leading-tight">${c.title}</h3>
                         </div>
-                        
-                        <div class="relative z-10 flex items-center gap-2">
-                            <div class="w-10 h-10 bg-white text-brand-primary rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-arrow-right"></i></div>
-                            <span class="text-sm font-medium opacity-90">Enter Course</span>
+                        <div class="relative z-0 flex justify-between items-end">
+                            <p class="text-sm font-medium opacity-80">Math &bull; IG</p>
+                            <div class="w-10 h-10 bg-white text-brand-primary rounded-full flex items-center justify-center shadow-lg group-hover:translate-x-1 transition"><i class="fas fa-arrow-right"></i></div>
                         </div>
                     </div>
                 `;
@@ -319,8 +411,8 @@
             container.innerHTML = html;
         };
 
-        // --- INTERMEDIATE: SELECT SUBGROUP ---
-        window.handleCardClick = async (courseId, subCount) => {
+        // --- NAVIGATION LOGIC ---
+        window.enterCourseLogic = async (courseId, subCount) => {
             if(subCount > 0) {
                 const snap = await getDoc(doc(db, "courses", courseId));
                 const course = snap.data();
@@ -328,7 +420,7 @@
                 
                 let html = `
                     <button onclick="renderAdminHome()" class="mb-6 flex items-center gap-2 text-slate-500 hover:text-brand-primary font-bold transition"><i class="fas fa-arrow-left"></i> Back</button>
-                    <h2 class="text-3xl font-bold text-slate-900 mb-2">Select Group</h2>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 mb-2">Select Group</h2>
                     <p class="text-slate-500 mb-8">Managing <b>${course.title}</b></p>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 fade-in">`;
                 
@@ -347,86 +439,98 @@
             }
         };
 
-        // --- THE "NEW PAGE" COURSE DASHBOARD ---
+        // --- NEW DASHBOARD LAYOUT ---
         window.openCourseDashboard = (id, title, subcode) => {
             activeCourseContext = { id, title, subcode };
             
-            // Sidebar Nav Update
-            const subLabel = subcode ? `(${subcode})` : '';
+            // SIDEBAR UPDATE
             document.getElementById('nav-links').innerHTML = `
-                <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-sm mb-4"><i class="fas fa-arrow-left"></i> Back to Hub</button>
+                <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-sm mb-6"><i class="fas fa-arrow-left"></i> Back to Hub</button>
                 
                 <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
-                <button onclick="renderTab('home')" class="nav-item course-tab w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
-                <button onclick="renderTab('videos')" class="nav-item course-tab w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Recorded Videos</button>
-                <button onclick="renderTab('summaries')" class="nav-item course-tab w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
-                <button onclick="renderTab('hw')" class="nav-item course-tab w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
+                <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
+                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Recorded Videos</button>
+                <button onclick="renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
+                <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
             `;
-
-            renderTab('home'); // Load default
+            renderTab('home');
         };
 
         window.renderTab = (tabName) => {
-            // Update Sidebar Active State
-            document.querySelectorAll('.course-tab').forEach(btn => {
-                btn.className = "nav-item course-tab w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1";
+            // Update Active State
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                if(b.getAttribute('onclick').includes(tabName)) {
+                    b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors";
+                } else {
+                    b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1 transition-colors";
+                }
             });
-            // Find the button that calls this tab (simple hack)
-            const clickedBtn = Array.from(document.querySelectorAll('.course-tab')).find(b => b.getAttribute('onclick').includes(tabName));
-            if(clickedBtn) clickedBtn.className = "nav-item course-tab w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1";
 
             const container = document.getElementById('main-view');
             const { title, subcode } = activeCourseContext;
+            
             const header = `
-                <div class="mb-8 border-b border-slate-200 pb-6">
-                    <h1 class="text-3xl font-bold text-slate-900">${title} <span class="text-brand-primary">${subcode ? subcode : ''}</span></h1>
-                    <p class="text-slate-500">Managing content for this group.</p>
+                <div class="mb-8 pb-6 border-b border-slate-200">
+                    <h1 class="text-3xl font-bold text-slate-900 font-display">${title} <span class="text-brand-primary ml-2">${subcode ? subcode : ''}</span></h1>
+                    <p class="text-slate-500 mt-1">Manage content for this group.</p>
                 </div>`;
 
-            if (tabName === 'home') {
-                container.innerHTML = `
-                    ${header}
-                    <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center fade-in">
-                        <div class="inline-block p-4 bg-amber-50 text-amber-500 rounded-full text-2xl mb-4"><i class="fas fa-bullhorn"></i></div>
-                        <h2 class="text-xl font-bold text-slate-800">Announcements</h2>
-                        <p class="text-slate-500 mb-6">Post updates for your students here.</p>
-                        <button class="bg-brand-dark text-white px-6 py-3 rounded-xl font-bold text-sm">New Announcement</button>
-                    </div>`;
-            } else if (tabName === 'videos') {
-                container.innerHTML = `
-                    ${header}
-                    <div class="flex justify-between items-center mb-6 fade-in">
-                        <h2 class="text-xl font-bold text-slate-800">Recorded Videos</h2>
-                        <button class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm"><i class="fas fa-plus mr-2"></i> Upload Video</button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-                            <div class="h-32 bg-slate-200 flex items-center justify-center text-slate-400"><i class="fas fa-play-circle text-3xl"></i></div>
-                            <div class="p-4"><h3 class="font-bold text-slate-800 text-sm">Introduction to Algebra</h3><p class="text-xs text-slate-500">45 mins</p></div>
+            let content = '';
+            
+            if(tabName === 'home') {
+                content = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
+                        <div class="md:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-lg text-slate-800">Announcements</h3>
+                                <button class="text-sm text-brand-primary font-bold hover:underline">+ New Post</button>
+                            </div>
+                            <div class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-400">No announcements yet.</div>
+                        </div>
+                        <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden">
+                            <h3 class="font-bold text-lg relative z-10">Next Session</h3>
+                            <p class="text-blue-100 text-sm relative z-10 mt-1">Schedule coming soon.</p>
+                            <div class="absolute -right-4 -bottom-4 text-6xl opacity-20"><i class="fas fa-clock"></i></div>
                         </div>
                     </div>`;
-            } else if (tabName === 'summaries') {
-                container.innerHTML = `
-                    ${header}
-                    <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center fade-in">
-                        <div class="inline-block p-4 bg-green-50 text-green-500 rounded-full text-2xl mb-4"><i class="fas fa-file-pdf"></i></div>
-                        <h2 class="text-xl font-bold text-slate-800">Video Summaries / Notes</h2>
-                        <button class="mt-4 bg-brand-dark text-white px-6 py-3 rounded-xl font-bold text-sm">Upload PDF</button>
+            } else if(tabName === 'videos') {
+                content = `
+                    <div class="flex justify-between items-center mb-6 fade-in">
+                        <h2 class="text-xl font-bold text-slate-800">Video Library</h2>
+                        <button class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Upload Video</button>
+                    </div>
+                    <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm">
+                        <div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-film text-2xl"></i></div>
+                        <p class="text-slate-500">No videos uploaded yet.</p>
                     </div>`;
-            } else if (tabName === 'hw') {
-                container.innerHTML = `
-                    ${header}
-                    <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center fade-in">
-                        <div class="inline-block p-4 bg-purple-50 text-purple-500 rounded-full text-2xl mb-4"><i class="fas fa-pencil-alt"></i></div>
-                        <h2 class="text-xl font-bold text-slate-800">Homework Assignments</h2>
-                        <button class="mt-4 bg-brand-primary text-white px-6 py-3 rounded-xl font-bold text-sm">Create Assignment</button>
+            } else if(tabName === 'summaries') {
+                content = `
+                    <div class="flex justify-between items-center mb-6 fade-in">
+                        <h2 class="text-xl font-bold text-slate-800">Class Summaries</h2>
+                        <button class="bg-brand-dark text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition"><i class="fas fa-file-upload mr-2"></i> Upload PDF</button>
+                    </div>
+                    <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm">
+                        <div class="inline-block p-4 bg-green-50 rounded-full text-green-400 mb-3"><i class="fas fa-file-pdf text-2xl"></i></div>
+                        <p class="text-slate-500">No summaries available.</p>
+                    </div>`;
+            } else if(tabName === 'hw') {
+                content = `
+                    <div class="flex justify-between items-center mb-6 fade-in">
+                        <h2 class="text-xl font-bold text-slate-800">Homework</h2>
+                        <button class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-600 transition"><i class="fas fa-plus mr-2"></i> New Task</button>
+                    </div>
+                    <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm">
+                        <div class="inline-block p-4 bg-amber-50 rounded-full text-amber-400 mb-3"><i class="fas fa-tasks text-2xl"></i></div>
+                        <p class="text-slate-500">No active homework.</p>
                     </div>`;
             }
+
+            container.innerHTML = header + content;
         };
 
-        // --- COURSE SETTINGS (EDIT/DELETE) ---
+        // --- COURSE MODAL & SAVING ---
         window.toggleCourseModal = () => document.getElementById('course-modal').classList.toggle('hidden');
-        
+
         window.openModalForCreate = () => {
             document.getElementById('modal-title').innerText = "Create New Course";
             document.getElementById('edit-course-id').value = "";
@@ -473,7 +577,9 @@
             const id = document.getElementById('edit-course-id').value;
             if(!title) return showToast("Title required", "error");
             const subs = [];
-            document.querySelectorAll('.subcourse-input').forEach(i => { if(i.value.trim()) subs.push(i.value.trim().toUpperCase()); });
+            document.querySelectorAll('.subcourse-input').forEach(input => {
+                if(input.value.trim()) subs.push(input.value.trim().toUpperCase());
+            });
 
             try {
                 if(id) {
@@ -501,7 +607,43 @@
             toggleCourseModal(); renderAdminHome(); showToast("Deleted");
         };
 
-        // --- UTILS & TOAST ---
+        // --- APPROVALS & STUDENT ---
+        window.renderApprovals = async () => {
+            document.getElementById('nav-links').innerHTML = `
+                <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-th-large"></i> Courses</button>
+                <button onclick="renderApprovals()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-user-check"></i> Approvals</button>
+            `;
+            const snap = await getDocs(query(collection(db, "users"), where("status", "==", "pending")));
+            let html = `<div class="max-w-4xl mx-auto"><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests</h2><div class="space-y-4">`;
+            if(snap.empty) html += `<p class="text-slate-400">No pending requests.</p>`;
+            snap.forEach(d => {
+                const u = d.data();
+                html += `<div class="bg-white p-5 rounded-xl border shadow-sm flex justify-between items-center"><div><h4 class="font-bold text-slate-900">${u.name}</h4><p class="text-xs text-slate-500 font-mono">${u.phone}</p>${u.subcourseCode ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-2 rounded">Code: ${u.subcourseCode}</span>` : ''}</div><button onclick="approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold">Approve</button></div>`;
+            });
+            html += `</div></div>`;
+            document.getElementById('main-view').innerHTML = html;
+        };
+        window.approveUser = async (uid) => { await updateDoc(doc(db, "users", uid), { status: 'approved' }); showToast("Approved"); renderApprovals(); };
+
+        window.renderStudentDashboard = async () => {
+            if(!currentUserData.courseId) return;
+            const cSnap = await getDoc(doc(db, "courses", currentUserData.courseId));
+            const title = cSnap.exists() ? cSnap.data().title : "Unknown Course";
+            // Pass context to renderTabs
+            activeCourseContext = { id: currentUserData.courseId, title, subcode: currentUserData.subcourseCode };
+            
+            // Reuse the renderTab logic but adapted for Student (Student might see less buttons)
+            document.getElementById('nav-links').innerHTML = `
+                <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Menu</div>
+                <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
+                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
+                <button onclick="renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
+                <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
+            `;
+            renderTab('home'); 
+        };
+
+        // UTILS
         function showToast(msg, type='success'){
             const el = document.createElement('div'); el.className = `${type==='error'?'bg-red-500':'bg-green-600'} text-white px-6 py-3.5 rounded-xl shadow-2xl font-bold fade-in z-[100]`; el.innerHTML = msg;
             document.getElementById('toast-container').appendChild(el); setTimeout(() => el.remove(), 4000);
