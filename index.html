@@ -8,6 +8,9 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- SortableJS for Mobile/Touch Dragging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
     <!-- Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -62,8 +65,8 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Dragging Styles */
-        .dragging { opacity: 0.5; border: 2px dashed #2563eb; transform: scale(0.95); }
-        .drag-target { border: 2px solid #f59e0b; }
+        .sortable-ghost { opacity: 0.4; background: #e2e8f0; }
+        .sortable-drag { cursor: grabbing; opacity: 1; background: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transform: scale(1.02); }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -256,7 +259,6 @@
                          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
                          <input type="text" id="content-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. Session 1">
                     </div>
-                    <!-- Order is now mostly handled via drag/drop but kept hidden/optional or as manual override if needed -->
                     <div class="w-24 hidden">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Order</label>
                         <input type="number" id="content-order" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition" placeholder="1" value="1">
@@ -311,7 +313,8 @@
         // FOLDER SYSTEM VARIABLES
         let currentFolderId = null;
         let breadcrumbs = [];
-        let currentItems = []; // Store current view items for reordering
+        let currentItems = []; 
+        let sortableInstance = null;
 
         // --- AUTH LOGIC ---
         window.switchTab = async (tab) => {
@@ -371,8 +374,7 @@
 
             const phone = regPhone.getNumber();
             const email = phone.replace('+', '') + "@igmath.com";
-            // Hardcoded admin for demo: +11234567890
-            const isAdmin = phone === '+11234567890';
+            const isAdmin = phone === '+11234567890'; // Hardcoded admin
 
             try {
                 const cred = await createUserWithEmailAndPassword(auth, email, pass);
@@ -458,7 +460,6 @@
             container.innerHTML = html;
         };
 
-        // --- NAVIGATION LOGIC ---
         window.enterCourseLogic = async (courseId, subCount) => {
             if(subCount > 0) {
                 const snap = await getDoc(doc(db, "courses", courseId));
@@ -496,18 +497,27 @@
                 ? `<button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-sm mb-6"><i class="fas fa-arrow-left"></i> Back to Hub</button>`
                 : `<div class="px-4 mb-4 text-xs font-bold text-slate-300 uppercase tracking-widest">Student View</div>`;
 
+            // Admin gets "Students" tab
+            const studentsTab = isAdmin ? 
+                `<button onclick="renderTab('students')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-users w-5 text-center"></i> Students</button>` 
+                : '';
+
             document.getElementById('nav-links').innerHTML = `
                 ${backBtn}
                 <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
                 <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
                 <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
                 <button onclick="renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
-                <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
+                <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
+                ${studentsTab}
             `;
             renderTab('home');
         };
 
         window.renderTab = async (tabName) => {
+            // Cleanup previous sortable
+            if(sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
+
             document.querySelectorAll('.tab-btn').forEach(b => {
                 if(b.getAttribute('onclick').includes(tabName)) {
                     b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors";
@@ -527,11 +537,52 @@
                     <p class="text-slate-500 mt-1">${isAdmin ? 'Manage content for this group.' : 'Welcome to your learning dashboard.'}</p>
                 </div>`;
 
-            const typeMap = { 'home': 'announcement', 'videos': 'video', 'summaries': 'summary', 'hw': 'homework' };
-            const dbType = typeMap[tabName];
             let contentHtml = '';
 
             try {
+                // --- STUDENTS TAB ---
+                if(tabName === 'students' && isAdmin) {
+                    // Fetch students for this course
+                    const qUsers = query(collection(db, "users"), where("courseId", "==", activeCourseContext.id));
+                    const snap = await getDocs(qUsers);
+                    let students = [];
+                    snap.forEach(d => {
+                        const u = d.data();
+                        // Filter by group if active context implies a group
+                        if(activeCourseContext.subcode && u.subcourseCode !== activeCourseContext.subcode) return;
+                        if(u.role !== 'admin') students.push({id: d.id, ...u});
+                    });
+
+                    // Render Student List
+                    const list = students.map(s => `
+                        <div class="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:shadow-md transition">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg"><i class="fas fa-user"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900">${s.name}</h4>
+                                    <p class="text-xs text-slate-500 font-mono">${s.phone}</p>
+                                </div>
+                            </div>
+                            <button onclick="deleteStudentAccount('${s.id}', '${s.name}')" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `).join('');
+
+                    contentHtml = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-xl font-bold text-slate-800">Enrolled Students</h2>
+                            <span class="bg-blue-50 text-brand-primary px-3 py-1 rounded-full text-xs font-bold">${students.length} Students</span>
+                        </div>
+                        <div class="space-y-3 fade-in">
+                            ${students.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No students enrolled yet.</div>`}
+                        </div>`;
+                    
+                    container.innerHTML = header + contentHtml;
+                    return; // Exit
+                }
+
+                // --- CONTENT TABS ---
+                const typeMap = { 'home': 'announcement', 'videos': 'video', 'summaries': 'summary', 'hw': 'homework' };
+                const dbType = typeMap[tabName];
                 let qTypes = [dbType];
                 if(tabName === 'videos') qTypes.push('folder');
 
@@ -550,7 +601,7 @@
                     items.push({id: d.id, ...data});
                 });
 
-                // Sort by Order (Ascending) then Date
+                // Sort
                 items.sort((a, b) => {
                     const orderA = a.order || 9999;
                     const orderB = b.order || 9999;
@@ -558,7 +609,7 @@
                     return new Date(b.createdAt) - new Date(a.createdAt);
                 });
                 
-                currentItems = items; // Store for drag/drop logic
+                currentItems = items;
 
                 if(tabName === 'home') {
                     const posts = items.map(item => `
@@ -603,13 +654,14 @@
                     }
 
                     const grid = items.map(item => {
-                        // DRAG ATTRIBUTES (Admin Only)
-                        const dragAttrs = isAdmin ? `draggable="true" ondragstart="handleDragStart(event, '${item.id}')" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${item.id}')"` : '';
+                        // Use class 'drag-handle' for SortableJS
+                        const dragHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-white/80 hover:text-white drop-shadow-md bg-black/20 p-1.5 rounded-lg touch-action-none"><i class="fas fa-grip-vertical text-sm"></i></div>` : '';
                         
                         if(item.type === 'folder') {
+                            const folderHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-yellow-300 hover:text-yellow-600 p-1.5 touch-action-none"><i class="fas fa-grip-vertical"></i></div>` : '';
                             return `
-                            <div ${dragAttrs} onclick="navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 rounded-xl p-6 border border-yellow-100 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition flex flex-col items-center justify-center text-center group relative select-none">
-                                ${isAdmin ? `<div class="absolute top-2 left-2 cursor-grab text-yellow-300 hover:text-yellow-600"><i class="fas fa-grip-vertical"></i></div>` : ''}
+                            <div data-id="${item.id}" onclick="navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 rounded-xl p-6 border border-yellow-100 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition flex flex-col items-center justify-center text-center group relative select-none h-full">
+                                ${folderHandle}
                                 <div class="text-4xl text-yellow-400 mb-2 group-hover:scale-110 transition"><i class="fas fa-folder"></i></div>
                                 <h4 class="font-bold text-slate-800 line-clamp-1">${item.title}</h4>
                                 <span class="text-[10px] text-yellow-600 font-bold uppercase tracking-wider">Folder</span>
@@ -621,11 +673,8 @@
                             </div>`;
                         } else {
                             let embedUrl = item.url || "";
-                            // Improved Drive Logic for Preview
                             if(embedUrl.includes('drive.google.com')) {
-                                // Remove extra params
                                 embedUrl = embedUrl.split('?')[0]; 
-                                // Force preview endpoint
                                 embedUrl = embedUrl.replace(/\/view$/, '/preview').replace(/\/edit$/, '/preview');
                             } else if(embedUrl.includes('watch?v=')) {
                                 embedUrl = embedUrl.replace('watch?v=', 'embed/');
@@ -634,8 +683,8 @@
                             }
 
                             return `
-                            <div ${dragAttrs} class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition group relative">
-                                ${isAdmin ? `<div class="absolute top-2 left-2 z-20 cursor-grab text-white/80 hover:text-white drop-shadow-md bg-black/20 p-1 rounded"><i class="fas fa-grip-vertical"></i></div>` : ''}
+                            <div data-id="${item.id}" class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition group relative">
+                                ${dragHandle}
                                 <div class="aspect-video bg-slate-900">
                                     <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
                                 </div>
@@ -666,7 +715,7 @@
                                 <button onclick="openContentModal('video')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Upload Video</button>
                             </div>` : ''}
                         </div>
-                        ${items.length ? `<div id="video-grid-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` : 
+                        ${items.length ? `<div id="video-sortable-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` : 
                         `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-folder-open text-2xl"></i></div><p class="text-slate-500">This folder is empty.</p></div>`}
                     `;
                 } else if(tabName === 'summaries') {
@@ -723,6 +772,34 @@
                         </div>`;
                 }
                 container.innerHTML = header + contentHtml;
+
+                // --- INITIALIZE SORTABLE ON VIDEOS TAB (ADMIN) ---
+                if(tabName === 'videos' && isAdmin && items.length > 0) {
+                    const el = document.getElementById('video-sortable-list');
+                    sortableInstance = new Sortable(el, {
+                        animation: 150,
+                        handle: '.drag-handle', // Only drag by icon
+                        ghostClass: 'sortable-ghost',
+                        dragClass: 'sortable-drag',
+                        onEnd: async function (evt) {
+                            // Reorder logic
+                            const newOrderIds = sortableInstance.toArray();
+                            showToast("Saving new order...", "success");
+                            try {
+                                const batch = writeBatch(db);
+                                newOrderIds.forEach((id, index) => {
+                                    const ref = doc(db, "course_content", id);
+                                    batch.update(ref, { order: index + 1 });
+                                });
+                                await batch.commit();
+                            } catch(e) {
+                                console.error(e);
+                                showToast("Error saving order", "error");
+                            }
+                        }
+                    });
+                }
+
             } catch(e) {
                 console.error(e);
                 container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content. <br> <span class="text-xs text-slate-400">${e.message}</span></div>`;
@@ -736,62 +813,17 @@
             renderTab('videos');
         }
 
-        // --- DRAG AND DROP REORDERING ---
-        let draggedItemId = null;
-
-        window.handleDragStart = (e, id) => {
-            draggedItemId = id;
-            e.dataTransfer.effectAllowed = 'move';
-            e.target.classList.add('dragging');
-        };
-
-        window.handleDragOver = (e) => {
-            e.preventDefault(); // Necessary to allow dropping
-            e.dataTransfer.dropEffect = 'move';
-        };
-
-        window.handleDrop = async (e, targetId) => {
-            e.preventDefault();
-            document.querySelector('.dragging')?.classList.remove('dragging');
-            
-            if(draggedItemId === targetId) return;
-
-            // Find indices locally
-            const dragIndex = currentItems.findIndex(i => i.id === draggedItemId);
-            const dropIndex = currentItems.findIndex(i => i.id === targetId);
-
-            if(dragIndex < 0 || dropIndex < 0) return;
-
-            // Reorder array locally first
-            const [movedItem] = currentItems.splice(dragIndex, 1);
-            currentItems.splice(dropIndex, 0, movedItem);
-
-            // Re-render immediately for UI feedback
-            // We can cheat and just re-render tab since local array is updated? 
-            // Better to show loading or just renderTab, but renderTab fetches from DB.
-            // Let's do a batch update then refresh.
-            
-            showToast("Saving order...", "success");
-
+        window.deleteStudentAccount = async (uid, name) => {
+            if(!confirm(`Are you sure you want to delete ${name}? This cannot be undone.`)) return;
             try {
-                const batch = writeBatch(db);
-                currentItems.forEach((item, index) => {
-                    const ref = doc(db, "course_content", item.id);
-                    batch.update(ref, { order: index + 1 });
-                });
-                await batch.commit();
-                renderTab('videos'); // Refresh from DB to be sure
-            } catch(err) {
-                showToast("Error reordering", "error");
-                console.error(err);
-            }
-            draggedItemId = null;
+                await deleteDoc(doc(db, "users", uid));
+                showToast("Student deleted");
+                renderTab('students');
+            } catch(e) { showToast("Error deleting student", "error"); }
         };
-
 
         // --- CONTENT MODAL & CRUD ---
         window.toggleContentModal = () => document.getElementById('content-modal').classList.toggle('hidden');
-
         window.openContentModal = (type) => {
             document.getElementById('content-type').value = type;
             document.getElementById('content-edit-id').value = "";
@@ -875,7 +907,6 @@
         window.handleSaveCourse = async () => { const title = document.getElementById('new-course-title').value; const id = document.getElementById('edit-course-id').value; if(!title) return showToast("Title required", "error"); const subs = []; document.querySelectorAll('.subcourse-input').forEach(input => { if(input.value.trim()) subs.push(input.value.trim().toUpperCase()); }); try { if(id) { await updateDoc(doc(db, "courses", id), { title, subcourses: subs }); showToast("Updated"); } else { const themes = ['linear-gradient(135deg, #1e293b, #334155)', 'linear-gradient(135deg, #1e40af, #3b82f6)', 'linear-gradient(135deg, #0f766e, #10b981)', 'linear-gradient(135deg, #b91c1c, #ef4444)', 'linear-gradient(135deg, #7c3aed, #8b5cf6)']; const theme = themes[Math.floor(Math.random() * themes.length)]; await addDoc(collection(db, "courses"), { title, subcourses: subs, theme, createdAt: new Date().toISOString() }); showToast("Created"); } toggleCourseModal(); renderAdminHome(); } catch(e) { showToast("Error", "error"); } };
         window.handleDeleteCourse = async () => { if(!confirm("Delete?")) return; await deleteDoc(doc(db, "courses", document.getElementById('edit-course-id').value)); toggleCourseModal(); renderAdminHome(); showToast("Deleted"); };
 
-        // --- ADMIN APPROVALS ---
         window.renderApprovals = async () => {
             document.getElementById('nav-links').innerHTML = `
                 <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-th-large"></i> Courses</button>
