@@ -61,6 +61,10 @@
         .spinner { border: 3px solid rgba(203, 213, 225, 0.3); border-radius: 50%; border-top: 3px solid #2563eb; width: 24px; height: 24px; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* Dragging Styles */
+        .dragging { opacity: 0.5; border: 2px dashed #2563eb; transform: scale(0.95); }
+        .drag-target { border: 2px solid #f59e0b; }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
@@ -245,10 +249,18 @@
             </div>
             <div class="p-6 space-y-5">
                 <input type="hidden" id="content-type">
+                <input type="hidden" id="content-edit-id"> 
                 
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Headline</label>
-                    <input type="text" id="content-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. Session 1 Recap">
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
+                         <input type="text" id="content-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. Session 1">
+                    </div>
+                    <!-- Order is now mostly handled via drag/drop but kept hidden/optional or as manual override if needed -->
+                    <div class="w-24 hidden">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Order</label>
+                        <input type="number" id="content-order" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition" placeholder="1" value="1">
+                    </div>
                 </div>
 
                 <!-- Dynamic Input Area -->
@@ -259,7 +271,7 @@
                 </div>
 
                 <button onclick="handleSaveContent()" class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
-                    Post Content
+                    Save / Post
                 </button>
             </div>
         </div>
@@ -271,7 +283,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, query, where, updateDoc, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, query, where, updateDoc, orderBy, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // FIREBASE CONFIG
         const firebaseConfig = {
@@ -295,6 +307,11 @@
         let currentUserData = null;
         let availableCourses = [];
         let activeCourseContext = null;
+        
+        // FOLDER SYSTEM VARIABLES
+        let currentFolderId = null;
+        let breadcrumbs = [];
+        let currentItems = []; // Store current view items for reordering
 
         // --- AUTH LOGIC ---
         window.switchTab = async (tab) => {
@@ -399,7 +416,9 @@
             container.innerHTML = '<div class="flex justify-center h-64 items-center"><span class="spinner border-slate-300 border-t-brand-primary w-8 h-8"></span></div>';
 
             const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt", "asc")));
-            
+            availableCourses = [];
+            snap.forEach(d => availableCourses.push({id: d.id, ...d.data()}));
+
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
                     <div onclick="openModalForCreate()" class="border-2 border-dashed border-slate-300 rounded-[2rem] h-64 flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-blue-50/50 transition group">
@@ -467,9 +486,10 @@
             }
         };
 
-        // --- COURSE DASHBOARD (NEW ACTIVE LOGIC) ---
         window.openCourseDashboard = (id, title, subcode) => {
             activeCourseContext = { id, title, subcode };
+            currentFolderId = null;
+            breadcrumbs = [];
             
             const isAdmin = currentUserData.role === 'admin';
             const backBtn = isAdmin 
@@ -480,7 +500,7 @@
                 ${backBtn}
                 <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
                 <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
-                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Recorded Videos</button>
+                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
                 <button onclick="renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
                 <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
             `;
@@ -488,7 +508,6 @@
         };
 
         window.renderTab = async (tabName) => {
-            // Update Active Tab UI
             document.querySelectorAll('.tab-btn').forEach(b => {
                 if(b.getAttribute('onclick').includes(tabName)) {
                     b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors";
@@ -502,56 +521,60 @@
 
             const { title, subcode } = activeCourseContext;
             const isAdmin = currentUserData.role === 'admin';
-
-            // Common Header
             const header = `
                 <div class="mb-8 pb-6 border-b border-slate-200">
                     <h1 class="text-3xl font-bold text-slate-900 font-display">${title} <span class="text-brand-primary ml-2">${subcode ? subcode : ''}</span></h1>
                     <p class="text-slate-500 mt-1">${isAdmin ? 'Manage content for this group.' : 'Welcome to your learning dashboard.'}</p>
                 </div>`;
 
-            // Mapping for database types
             const typeMap = { 'home': 'announcement', 'videos': 'video', 'summaries': 'summary', 'hw': 'homework' };
             const dbType = typeMap[tabName];
-
-            // Fetch Content
             let contentHtml = '';
+
             try {
-                // *** FIX: REMOVED orderBy FROM QUERY TO PREVENT INDEX ERROR ***
-                // We sort in Javascript instead.
-                const q = query(
-                    collection(db, "course_content"), 
-                    where("courseId", "==", activeCourseContext.id),
-                    where("type", "==", dbType)
-                );
-                
+                let qTypes = [dbType];
+                if(tabName === 'videos') qTypes.push('folder');
+
+                const q = query(collection(db, "course_content"), where("courseId", "==", activeCourseContext.id));
                 const snap = await getDocs(q);
                 let items = [];
                 
                 snap.forEach(d => {
                     const data = d.data();
-                    if(!data.subcourseCode || data.subcourseCode === activeCourseContext.subcode) {
-                        items.push({id: d.id, ...data});
+                    if(data.subcourseCode && data.subcourseCode !== activeCourseContext.subcode) return;
+                    if(!qTypes.includes(data.type)) return;
+                    if(tabName === 'videos') {
+                        if(currentFolderId === null) { if(data.parentId) return; }
+                        else { if(data.parentId !== currentFolderId) return; }
                     }
+                    items.push({id: d.id, ...data});
                 });
 
-                // *** FIX: SORTING DONE HERE INSTEAD OF DB ***
-                items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-                // --- TAB RENDERING ---
+                // Sort by Order (Ascending) then Date
+                items.sort((a, b) => {
+                    const orderA = a.order || 9999;
+                    const orderB = b.order || 9999;
+                    if(orderA !== orderB) return orderA - orderB;
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+                
+                currentItems = items; // Store for drag/drop logic
 
                 if(tabName === 'home') {
                     const posts = items.map(item => `
                         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-4">
                             <div class="flex justify-between items-start mb-2">
                                 <h4 class="font-bold text-slate-800 text-lg">${item.title}</h4>
-                                ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'home')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>` : ''}
+                                ${isAdmin ? `
+                                <div class="flex gap-2">
+                                    <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-400 hover:text-brand-primary text-xs"><i class="fas fa-pencil-alt"></i></button>
+                                    <button onclick="deleteContent('${item.id}', 'home')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>
+                                </div>` : ''}
                             </div>
                             <p class="text-slate-600 leading-relaxed whitespace-pre-wrap">${item.content}</p>
                             <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">${new Date(item.createdAt).toLocaleDateString()}</p>
                         </div>
                     `).join('');
-
                     contentHtml = `
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
                             <div class="md:col-span-2">
@@ -567,37 +590,85 @@
                                 <div class="absolute -right-4 -bottom-4 text-6xl opacity-20"><i class="fas fa-clock"></i></div>
                             </div>
                         </div>`;
-
                 } else if(tabName === 'videos') {
-                    const grid = items.map(item => {
-                        let embedUrl = item.url;
-                        if(item.url.includes('watch?v=')) embedUrl = item.url.replace('watch?v=', 'embed/');
-                        else if(item.url.includes('youtu.be/')) embedUrl = item.url.replace('youtu.be/', 'www.youtube.com/embed/');
-
-                        return `
-                        <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition">
-                            <div class="aspect-video bg-slate-900">
-                                <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
-                            </div>
-                            <div class="p-4">
-                                <div class="flex justify-between items-start">
-                                    <h4 class="font-bold text-slate-800 line-clamp-2">${item.title}</h4>
-                                    ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'videos')" class="text-red-400 hover:text-red-600 ml-2"><i class="fas fa-trash"></i></button>` : ''}
-                                </div>
-                                <p class="text-xs text-slate-500 mt-2">${new Date(item.createdAt).toLocaleDateString()}</p>
-                            </div>
+                    let breadcrumbHtml = '';
+                    if(currentFolderId) {
+                        breadcrumbHtml = `<div class="flex items-center gap-2 mb-6 text-sm font-bold text-slate-500 fade-in">
+                            <span onclick="navigateToFolder(null)" class="cursor-pointer hover:text-brand-primary">Home</span>
+                            ${breadcrumbs.map((b, i) => `
+                                <i class="fas fa-chevron-right text-[10px]"></i>
+                                <span onclick="navigateToFolder('${b.id}', ${i})" class="cursor-pointer hover:text-brand-primary">${b.title}</span>
+                            `).join('')}
                         </div>`;
+                    }
+
+                    const grid = items.map(item => {
+                        // DRAG ATTRIBUTES (Admin Only)
+                        const dragAttrs = isAdmin ? `draggable="true" ondragstart="handleDragStart(event, '${item.id}')" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${item.id}')"` : '';
+                        
+                        if(item.type === 'folder') {
+                            return `
+                            <div ${dragAttrs} onclick="navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 rounded-xl p-6 border border-yellow-100 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition flex flex-col items-center justify-center text-center group relative select-none">
+                                ${isAdmin ? `<div class="absolute top-2 left-2 cursor-grab text-yellow-300 hover:text-yellow-600"><i class="fas fa-grip-vertical"></i></div>` : ''}
+                                <div class="text-4xl text-yellow-400 mb-2 group-hover:scale-110 transition"><i class="fas fa-folder"></i></div>
+                                <h4 class="font-bold text-slate-800 line-clamp-1">${item.title}</h4>
+                                <span class="text-[10px] text-yellow-600 font-bold uppercase tracking-wider">Folder</span>
+                                ${isAdmin ? `
+                                <div class="absolute top-2 right-2 flex gap-1 z-20" onclick="event.stopPropagation()">
+                                    <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-6 h-6 rounded-full bg-white text-slate-400 hover:text-brand-primary flex items-center justify-center shadow-sm"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                    <button onclick="deleteContent('${item.id}', 'videos')" class="w-6 h-6 rounded-full bg-white text-red-300 hover:text-red-500 flex items-center justify-center shadow-sm"><i class="fas fa-trash text-xs"></i></button>
+                                </div>` : ''}
+                            </div>`;
+                        } else {
+                            let embedUrl = item.url || "";
+                            // Improved Drive Logic for Preview
+                            if(embedUrl.includes('drive.google.com')) {
+                                // Remove extra params
+                                embedUrl = embedUrl.split('?')[0]; 
+                                // Force preview endpoint
+                                embedUrl = embedUrl.replace(/\/view$/, '/preview').replace(/\/edit$/, '/preview');
+                            } else if(embedUrl.includes('watch?v=')) {
+                                embedUrl = embedUrl.replace('watch?v=', 'embed/');
+                            } else if(embedUrl.includes('youtu.be/')) {
+                                embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+                            }
+
+                            return `
+                            <div ${dragAttrs} class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition group relative">
+                                ${isAdmin ? `<div class="absolute top-2 left-2 z-20 cursor-grab text-white/80 hover:text-white drop-shadow-md bg-black/20 p-1 rounded"><i class="fas fa-grip-vertical"></i></div>` : ''}
+                                <div class="aspect-video bg-slate-900">
+                                    <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                                </div>
+                                <div class="p-4">
+                                    <div class="flex justify-between items-start gap-2">
+                                        <h4 class="font-bold text-slate-800 line-clamp-2 text-sm flex-1">${item.title}</h4>
+                                        ${isAdmin ? `
+                                        <div class="flex gap-2 shrink-0">
+                                            <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-400 hover:text-brand-primary"><i class="fas fa-pencil-alt"></i></button>
+                                            <button onclick="deleteContent('${item.id}', 'videos')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
+                                        </div>` : ''}
+                                    </div>
+                                    <p class="text-[10px] text-slate-400 mt-2 font-bold flex justify-between">
+                                        <span>${new Date(item.createdAt).toLocaleDateString()}</span>
+                                    </p>
+                                </div>
+                            </div>`;
+                        }
                     }).join('');
 
                     contentHtml = `
+                        ${breadcrumbHtml}
                         <div class="flex justify-between items-center mb-6 fade-in">
-                            <h2 class="text-xl font-bold text-slate-800">Video Library</h2>
-                            ${isAdmin ? `<button onclick="openContentModal('video')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Add Video</button>` : ''}
+                            <h2 class="text-xl font-bold text-slate-800">${currentFolderId ? 'Folder Contents' : 'Videos & Folders'}</h2>
+                            ${isAdmin ? `
+                            <div class="flex gap-2">
+                                <button onclick="openContentModal('folder')" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-200 transition"><i class="fas fa-folder-plus mr-2"></i> New Folder</button>
+                                <button onclick="openContentModal('video')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Upload Video</button>
+                            </div>` : ''}
                         </div>
-                        ${items.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` : 
-                        `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-film text-2xl"></i></div><p class="text-slate-500">No videos yet.</p></div>`}
+                        ${items.length ? `<div id="video-grid-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` : 
+                        `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-folder-open text-2xl"></i></div><p class="text-slate-500">This folder is empty.</p></div>`}
                     `;
-
                 } else if(tabName === 'summaries') {
                     const list = items.map(item => `
                         <div class="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:border-brand-primary/30 transition group">
@@ -610,11 +681,12 @@
                             </div>
                             <div class="flex gap-2">
                                 <a href="${item.url}" target="_blank" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100">View</a>
-                                ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
+                                ${isAdmin ? `
+                                <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-primary rounded-lg border border-slate-100"><i class="fas fa-pencil-alt"></i></button>
+                                <button onclick="deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
                     `).join('');
-
                     contentHtml = `
                         <div class="flex justify-between items-center mb-6 fade-in">
                             <h2 class="text-xl font-bold text-slate-800">Class Summaries</h2>
@@ -623,11 +695,14 @@
                         <div class="space-y-3 fade-in">
                             ${items.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No summaries found.</div>`}
                         </div>`;
-
                 } else if(tabName === 'hw') {
                     const list = items.map(item => `
                         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition relative">
-                            ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'hw')" class="absolute top-4 right-4 text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
+                            ${isAdmin ? `
+                            <div class="absolute top-4 right-4 flex gap-2">
+                                <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary"><i class="fas fa-pencil-alt"></i></button>
+                                <button onclick="deleteContent('${item.id}', 'hw')" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                            </div>` : ''}
                             <div class="flex items-start gap-4">
                                 <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fas fa-pencil-alt"></i></div>
                                 <div class="flex-1">
@@ -638,7 +713,6 @@
                             </div>
                         </div>
                     `).join('');
-
                     contentHtml = `
                         <div class="flex justify-between items-center mb-6 fade-in">
                             <h2 class="text-xl font-bold text-slate-800">Homework & Tasks</h2>
@@ -648,176 +722,158 @@
                             ${items.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No active homework.</div>`}
                         </div>`;
                 }
-
                 container.innerHTML = header + contentHtml;
-
             } catch(e) {
-                console.error(e); // Added logging to see errors in console
+                console.error(e);
                 container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content. <br> <span class="text-xs text-slate-400">${e.message}</span></div>`;
             }
         };
+
+        window.navigateToFolder = (id, breadcrumbIndex = null, title = null) => {
+            if(id === null) { currentFolderId = null; breadcrumbs = []; }
+            else if(breadcrumbIndex !== null) { currentFolderId = id; breadcrumbs = breadcrumbs.slice(0, breadcrumbIndex + 1); }
+            else { currentFolderId = id; breadcrumbs.push({ id, title }); }
+            renderTab('videos');
+        }
+
+        // --- DRAG AND DROP REORDERING ---
+        let draggedItemId = null;
+
+        window.handleDragStart = (e, id) => {
+            draggedItemId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+        };
+
+        window.handleDragOver = (e) => {
+            e.preventDefault(); // Necessary to allow dropping
+            e.dataTransfer.dropEffect = 'move';
+        };
+
+        window.handleDrop = async (e, targetId) => {
+            e.preventDefault();
+            document.querySelector('.dragging')?.classList.remove('dragging');
+            
+            if(draggedItemId === targetId) return;
+
+            // Find indices locally
+            const dragIndex = currentItems.findIndex(i => i.id === draggedItemId);
+            const dropIndex = currentItems.findIndex(i => i.id === targetId);
+
+            if(dragIndex < 0 || dropIndex < 0) return;
+
+            // Reorder array locally first
+            const [movedItem] = currentItems.splice(dragIndex, 1);
+            currentItems.splice(dropIndex, 0, movedItem);
+
+            // Re-render immediately for UI feedback
+            // We can cheat and just re-render tab since local array is updated? 
+            // Better to show loading or just renderTab, but renderTab fetches from DB.
+            // Let's do a batch update then refresh.
+            
+            showToast("Saving order...", "success");
+
+            try {
+                const batch = writeBatch(db);
+                currentItems.forEach((item, index) => {
+                    const ref = doc(db, "course_content", item.id);
+                    batch.update(ref, { order: index + 1 });
+                });
+                await batch.commit();
+                renderTab('videos'); // Refresh from DB to be sure
+            } catch(err) {
+                showToast("Error reordering", "error");
+                console.error(err);
+            }
+            draggedItemId = null;
+        };
+
 
         // --- CONTENT MODAL & CRUD ---
         window.toggleContentModal = () => document.getElementById('content-modal').classList.toggle('hidden');
 
         window.openContentModal = (type) => {
             document.getElementById('content-type').value = type;
+            document.getElementById('content-edit-id').value = "";
             document.getElementById('content-title').value = "";
             document.getElementById('content-body').value = "";
             document.getElementById('content-link').value = "";
+            document.getElementById('content-order').value = (currentItems.length + 1);
             
             const titleEl = document.getElementById('content-modal-title');
             const labelEl = document.getElementById('content-label');
             const body = document.getElementById('content-body');
             const link = document.getElementById('content-link');
 
-            // Reset visibility
             body.classList.remove('hidden');
             link.classList.add('hidden');
 
-            if(type === 'announcement') {
-                titleEl.innerText = "New Announcement";
-                labelEl.innerText = "Message";
-            } else if(type === 'video') {
-                titleEl.innerText = "Add Video";
-                labelEl.innerText = "YouTube URL";
-                body.classList.add('hidden');
-                link.classList.remove('hidden');
-            } else if(type === 'summary') {
-                titleEl.innerText = "Add Summary";
-                labelEl.innerText = "PDF/Drive URL";
-                body.classList.add('hidden');
-                link.classList.remove('hidden');
-            } else if(type === 'homework') {
-                titleEl.innerText = "Assign Homework";
-                labelEl.innerText = "Instructions";
-                link.classList.remove('hidden');
-                link.placeholder = "Optional Link (e.g. Worksheet URL)";
-            }
+            if(type === 'announcement') { titleEl.innerText = "New Announcement"; labelEl.innerText = "Message"; }
+            else if(type === 'video') { titleEl.innerText = "Add Video"; labelEl.innerText = "YouTube/Drive URL"; body.classList.add('hidden'); link.classList.remove('hidden'); }
+            else if(type === 'folder') { titleEl.innerText = "Create New Folder"; labelEl.innerText = "Description (Optional)"; body.classList.remove('hidden'); link.classList.add('hidden'); }
+            else if(type === 'summary') { titleEl.innerText = "Add Summary"; labelEl.innerText = "PDF/Drive URL"; body.classList.add('hidden'); link.classList.remove('hidden'); }
+            else if(type === 'homework') { titleEl.innerText = "Assign Homework"; labelEl.innerText = "Instructions"; link.classList.remove('hidden'); link.placeholder = "Optional Link (e.g. Worksheet URL)"; }
             
             toggleContentModal();
         };
 
+        window.openEditContentModal = (itemStr) => {
+            const item = JSON.parse(decodeURIComponent(itemStr));
+            openContentModal(item.type);
+            document.getElementById('content-modal-title').innerText = "Edit Content";
+            document.getElementById('content-edit-id').value = item.id;
+            document.getElementById('content-title').value = item.title;
+            document.getElementById('content-body').value = item.content || "";
+            document.getElementById('content-link').value = item.url || "";
+            document.getElementById('content-order').value = item.order || 1;
+        };
+
         window.handleSaveContent = async () => {
             const type = document.getElementById('content-type').value;
+            const editId = document.getElementById('content-edit-id').value;
             const title = document.getElementById('content-title').value;
             const body = document.getElementById('content-body').value;
             const url = document.getElementById('content-link').value;
+            const order = parseInt(document.getElementById('content-order').value) || 1;
 
             if(!title) return showToast("Title required", "error");
             if((type === 'video' || type === 'summary') && !url) return showToast("URL required", "error");
 
             try {
-                await addDoc(collection(db, "course_content"), {
+                const data = {
                     courseId: activeCourseContext.id,
                     subcourseCode: activeCourseContext.subcode || null,
-                    type,
-                    title,
-                    content: body,
-                    url,
-                    createdAt: new Date().toISOString(),
+                    type, title, content: body, url, order,
+                    parentId: currentFolderId, 
                     authorId: currentUserData.uid
-                });
-                showToast("Posted successfully");
-                toggleContentModal();
-                
-                // Refresh current tab
-                const tabMap = { 'announcement': 'home', 'video': 'videos', 'summary': 'summaries', 'homework': 'hw' };
-                renderTab(tabMap[type]);
+                };
 
-            } catch(e) {
-                console.error(e);
-                showToast("Error saving content", "error");
-            }
+                if(editId) {
+                    await updateDoc(doc(db, "course_content", editId), { title, content: body, url, order });
+                    showToast("Updated successfully");
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await addDoc(collection(db, "course_content"), data);
+                    showToast("Created successfully");
+                }
+                toggleContentModal();
+                const tabMap = { 'announcement': 'home', 'video': 'videos', 'folder': 'videos', 'summary': 'summaries', 'homework': 'hw' };
+                renderTab(tabMap[type]);
+            } catch(e) { console.error(e); showToast("Error saving content", "error"); }
         };
 
         window.deleteContent = async (id, currentTab) => {
-            if(!confirm("Delete this item?")) return;
-            try {
-                await deleteDoc(doc(db, "course_content", id));
-                showToast("Deleted");
-                renderTab(currentTab);
-            } catch(e) { showToast("Error deleting", "error"); }
+            if(!confirm("Delete this item? If it's a folder, contents might be hidden.")) return;
+            try { await deleteDoc(doc(db, "course_content", id)); showToast("Deleted"); renderTab(currentTab); } catch(e) { showToast("Error deleting", "error"); }
         };
 
-        // --- COURSE MANAGEMENT (EXISTING) ---
+        // --- COURSE MANAGEMENT ---
         window.toggleCourseModal = () => document.getElementById('course-modal').classList.toggle('hidden');
-
-        window.openModalForCreate = () => {
-            document.getElementById('modal-title').innerText = "Create New Course";
-            document.getElementById('edit-course-id').value = "";
-            document.getElementById('new-course-title').value = "";
-            document.getElementById('btn-delete-course').classList.add('hidden');
-            setupSubcourseInputs(['']); 
-            document.getElementById('course-modal').classList.remove('hidden');
-        };
-
-        window.openModalForEdit = (courseStr, e) => {
-            e.stopPropagation();
-            const course = JSON.parse(decodeURIComponent(courseStr));
-            document.getElementById('modal-title').innerText = "Edit Course";
-            document.getElementById('edit-course-id').value = course.id;
-            document.getElementById('new-course-title').value = course.title;
-            document.getElementById('btn-delete-course').classList.remove('hidden');
-            let subs = course.subcourses || [];
-            if(subs.length === 0 || subs[subs.length-1] !== '') subs.push('');
-            setupSubcourseInputs(subs);
-            document.getElementById('course-modal').classList.remove('hidden');
-        };
-
-        function setupSubcourseInputs(codes) {
-            const container = document.getElementById('subcourse-container');
-            container.innerHTML = '';
-            const createInput = (val) => {
-                const div = document.createElement('div');
-                div.className = "flex items-center gap-2 mb-2 fade-in";
-                div.innerHTML = `<input type="text" value="${val}" class="subcourse-input flex-1 p-3 bg-white border border-blue-200 rounded-lg text-sm font-mono outline-none focus:border-brand-primary uppercase" placeholder="Code (e.g. 10A)">
-                    ${val ? `<button class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>` : ''}`;
-                const btn = div.querySelector('button'); if(btn) btn.onclick = () => div.remove();
-                const input = div.querySelector('input');
-                input.addEventListener('input', (e) => {
-                    const all = container.querySelectorAll('input');
-                    if (e.target === all[all.length-1] && e.target.value.trim() !== "") container.appendChild(createInput(''));
-                });
-                return div;
-            };
-            codes.forEach(c => container.appendChild(createInput(c)));
-        }
-
-        window.handleSaveCourse = async () => {
-            const title = document.getElementById('new-course-title').value;
-            const id = document.getElementById('edit-course-id').value;
-            if(!title) return showToast("Title required", "error");
-            const subs = [];
-            document.querySelectorAll('.subcourse-input').forEach(input => {
-                if(input.value.trim()) subs.push(input.value.trim().toUpperCase());
-            });
-
-            try {
-                if(id) {
-                    await updateDoc(doc(db, "courses", id), { title, subcourses: subs });
-                    showToast("Updated");
-                } else {
-                    const themes = [
-                        'linear-gradient(135deg, #1e293b, #334155)', // Dark Slate
-                        'linear-gradient(135deg, #1e40af, #3b82f6)', // Royal Blue
-                        'linear-gradient(135deg, #0f766e, #10b981)', // Teal
-                        'linear-gradient(135deg, #b91c1c, #ef4444)', // Red
-                        'linear-gradient(135deg, #7c3aed, #8b5cf6)'  // Violet
-                    ];
-                    const theme = themes[Math.floor(Math.random() * themes.length)];
-                    await addDoc(collection(db, "courses"), { title, subcourses: subs, theme, createdAt: new Date().toISOString() });
-                    showToast("Created");
-                }
-                toggleCourseModal(); renderAdminHome();
-            } catch(e) { showToast("Error", "error"); }
-        };
-
-        window.handleDeleteCourse = async () => {
-            if(!confirm("Delete?")) return;
-            await deleteDoc(doc(db, "courses", document.getElementById('edit-course-id').value));
-            toggleCourseModal(); renderAdminHome(); showToast("Deleted");
-        };
+        window.openModalForCreate = () => { document.getElementById('modal-title').innerText = "Create New Course"; document.getElementById('edit-course-id').value = ""; document.getElementById('new-course-title').value = ""; document.getElementById('btn-delete-course').classList.add('hidden'); setupSubcourseInputs(['']); document.getElementById('course-modal').classList.remove('hidden'); };
+        window.openModalForEdit = (courseStr, e) => { e.stopPropagation(); const course = JSON.parse(decodeURIComponent(courseStr)); document.getElementById('modal-title').innerText = "Edit Course"; document.getElementById('edit-course-id').value = course.id; document.getElementById('new-course-title').value = course.title; document.getElementById('btn-delete-course').classList.remove('hidden'); let subs = course.subcourses || []; if(subs.length === 0 || subs[subs.length-1] !== '') subs.push(''); setupSubcourseInputs(subs); document.getElementById('course-modal').classList.remove('hidden'); };
+        function setupSubcourseInputs(codes) { const container = document.getElementById('subcourse-container'); container.innerHTML = ''; const createInput = (val) => { const div = document.createElement('div'); div.className = "flex items-center gap-2 mb-2 fade-in"; div.innerHTML = `<input type="text" value="${val}" class="subcourse-input flex-1 p-3 bg-white border border-blue-200 rounded-lg text-sm font-mono outline-none focus:border-brand-primary uppercase" placeholder="Code (e.g. 10A)"> ${val ? `<button class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>` : ''}`; const btn = div.querySelector('button'); if(btn) btn.onclick = () => div.remove(); const input = div.querySelector('input'); input.addEventListener('input', (e) => { const all = container.querySelectorAll('input'); if (e.target === all[all.length-1] && e.target.value.trim() !== "") container.appendChild(createInput('')); }); return div; }; codes.forEach(c => container.appendChild(createInput(c))); }
+        window.handleSaveCourse = async () => { const title = document.getElementById('new-course-title').value; const id = document.getElementById('edit-course-id').value; if(!title) return showToast("Title required", "error"); const subs = []; document.querySelectorAll('.subcourse-input').forEach(input => { if(input.value.trim()) subs.push(input.value.trim().toUpperCase()); }); try { if(id) { await updateDoc(doc(db, "courses", id), { title, subcourses: subs }); showToast("Updated"); } else { const themes = ['linear-gradient(135deg, #1e293b, #334155)', 'linear-gradient(135deg, #1e40af, #3b82f6)', 'linear-gradient(135deg, #0f766e, #10b981)', 'linear-gradient(135deg, #b91c1c, #ef4444)', 'linear-gradient(135deg, #7c3aed, #8b5cf6)']; const theme = themes[Math.floor(Math.random() * themes.length)]; await addDoc(collection(db, "courses"), { title, subcourses: subs, theme, createdAt: new Date().toISOString() }); showToast("Created"); } toggleCourseModal(); renderAdminHome(); } catch(e) { showToast("Error", "error"); } };
+        window.handleDeleteCourse = async () => { if(!confirm("Delete?")) return; await deleteDoc(doc(db, "courses", document.getElementById('edit-course-id').value)); toggleCourseModal(); renderAdminHome(); showToast("Deleted"); };
 
         // --- ADMIN APPROVALS ---
         window.renderApprovals = async () => {
@@ -825,35 +881,35 @@
                 <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-th-large"></i> Courses</button>
                 <button onclick="renderApprovals()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-user-check"></i> Approvals</button>
             `;
+            if(availableCourses.length === 0) { const cSnap = await getDocs(query(collection(db, "courses"))); cSnap.forEach(d => availableCourses.push({id: d.id, ...d.data()})); }
             const snap = await getDocs(query(collection(db, "users"), where("status", "==", "pending")));
             let html = `<div class="max-w-4xl mx-auto"><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests</h2><div class="space-y-4">`;
             if(snap.empty) html += `<p class="text-slate-400">No pending requests.</p>`;
             snap.forEach(d => {
                 const u = d.data();
-                html += `<div class="bg-white p-5 rounded-xl border shadow-sm flex justify-between items-center"><div><h4 class="font-bold text-slate-900">${u.name}</h4><p class="text-xs text-slate-500 font-mono">${u.phone}</p>${u.subcourseCode ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-2 rounded">Code: ${u.subcourseCode}</span>` : ''}</div><button onclick="approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold">Approve</button></div>`;
+                const course = availableCourses.find(c => c.id === u.courseId);
+                const courseName = course ? course.title : "Unknown Course";
+                html += `
+                <div class="bg-white p-5 rounded-xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h4 class="font-bold text-slate-900 text-lg">${u.name}</h4>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold"><i class="fas fa-phone-alt mr-1"></i> ${u.phone}</span>
+                            <span class="text-xs bg-blue-50 text-brand-primary px-2 py-0.5 rounded font-bold"><i class="fas fa-book mr-1"></i> ${courseName}</span>
+                            ${u.subcourseCode ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold">Group: ${u.subcourseCode}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-green-100">Approve</button>
+                </div>`;
             });
             html += `</div></div>`;
             document.getElementById('main-view').innerHTML = html;
         };
         window.approveUser = async (uid) => { await updateDoc(doc(db, "users", uid), { status: 'approved' }); showToast("Approved"); renderApprovals(); };
 
-        // --- STUDENT VIEW ---
-        window.renderStudentDashboard = async () => {
-            if(!currentUserData.courseId) return;
-            const cSnap = await getDoc(doc(db, "courses", currentUserData.courseId));
-            const title = cSnap.exists() ? cSnap.data().title : "Unknown Course";
-            
-            // Setup context and reuse the existing renderer
-            activeCourseContext = { id: currentUserData.courseId, title, subcode: currentUserData.subcourseCode };
-            openCourseDashboard(currentUserData.courseId, title, currentUserData.subcourseCode);
-        };
-
-        function showToast(msg, type='success'){
-            const el = document.createElement('div'); el.className = `${type==='error'?'bg-red-500':'bg-green-600'} text-white px-6 py-3.5 rounded-xl shadow-2xl font-bold fade-in z-[100]`; el.innerHTML = msg;
-            document.getElementById('toast-container').appendChild(el); setTimeout(() => el.remove(), 4000);
-        }
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
-        document.getElementById('logout-pending').onclick = () => signOut(auth);
+        window.renderStudentDashboard = async () => { if(!currentUserData.courseId) return; const cSnap = await getDoc(doc(db, "courses", currentUserData.courseId)); const title = cSnap.exists() ? cSnap.data().title : "Unknown Course"; activeCourseContext = { id: currentUserData.courseId, title, subcode: currentUserData.subcourseCode }; openCourseDashboard(currentUserData.courseId, title, currentUserData.subcourseCode); };
+        function showToast(msg, type='success'){ const el = document.createElement('div'); el.className = `${type==='error'?'bg-red-500':'bg-green-600'} text-white px-6 py-3.5 rounded-xl shadow-2xl font-bold fade-in z-[100]`; el.innerHTML = msg; document.getElementById('toast-container').appendChild(el); setTimeout(() => el.remove(), 4000); }
+        document.getElementById('logout-btn').onclick = () => signOut(auth); document.getElementById('logout-pending').onclick = () => signOut(auth);
         document.getElementById('open-sidebar').onclick = () => { document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('mobile-overlay').classList.remove('hidden'); };
         document.getElementById('close-sidebar').onclick = () => { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('mobile-overlay').classList.add('hidden'); };
         document.getElementById('mobile-overlay').onclick = () => { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('mobile-overlay').classList.add('hidden'); };
