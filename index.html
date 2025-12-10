@@ -245,17 +245,10 @@
             </div>
             <div class="p-6 space-y-5">
                 <input type="hidden" id="content-type">
-                <input type="hidden" id="content-edit-id"> <!-- For editing existing content -->
                 
-                <div class="flex gap-4">
-                    <div class="flex-1">
-                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
-                         <input type="text" id="content-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. Session 1">
-                    </div>
-                    <div class="w-24">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Order</label>
-                        <input type="number" id="content-order" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition" placeholder="1" value="1">
-                    </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Headline</label>
+                    <input type="text" id="content-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. Session 1 Recap">
                 </div>
 
                 <!-- Dynamic Input Area -->
@@ -266,7 +259,7 @@
                 </div>
 
                 <button onclick="handleSaveContent()" class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
-                    Save / Post
+                    Post Content
                 </button>
             </div>
         </div>
@@ -302,10 +295,6 @@
         let currentUserData = null;
         let availableCourses = [];
         let activeCourseContext = null;
-        
-        // FOLDER SYSTEM VARIABLES
-        let currentFolderId = null;
-        let breadcrumbs = [];
 
         // --- AUTH LOGIC ---
         window.switchTab = async (tab) => {
@@ -411,10 +400,6 @@
 
             const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt", "asc")));
             
-            // Populate global var for quick lookup later
-            availableCourses = [];
-            snap.forEach(d => availableCourses.push({id: d.id, ...d.data()}));
-
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
                     <div onclick="openModalForCreate()" class="border-2 border-dashed border-slate-300 rounded-[2rem] h-64 flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-blue-50/50 transition group">
@@ -485,8 +470,6 @@
         // --- COURSE DASHBOARD (NEW ACTIVE LOGIC) ---
         window.openCourseDashboard = (id, title, subcode) => {
             activeCourseContext = { id, title, subcode };
-            currentFolderId = null; // Reset folder on entry
-            breadcrumbs = [];
             
             const isAdmin = currentUserData.role === 'admin';
             const backBtn = isAdmin 
@@ -497,7 +480,7 @@
                 ${backBtn}
                 <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
                 <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
-                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
+                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Recorded Videos</button>
                 <button onclick="renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
                 <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
             `;
@@ -534,14 +517,12 @@
             // Fetch Content
             let contentHtml = '';
             try {
-                // If in videos tab, we fetch videos AND folders
-                let qTypes = [dbType];
-                if(tabName === 'videos') qTypes.push('folder');
-
-                // Client-side filtering query to avoid index errors
+                // *** FIX: REMOVED orderBy FROM QUERY TO PREVENT INDEX ERROR ***
+                // We sort in Javascript instead.
                 const q = query(
                     collection(db, "course_content"), 
-                    where("courseId", "==", activeCourseContext.id)
+                    where("courseId", "==", activeCourseContext.id),
+                    where("type", "==", dbType)
                 );
                 
                 const snap = await getDocs(q);
@@ -549,32 +530,13 @@
                 
                 snap.forEach(d => {
                     const data = d.data();
-                    
-                    // Filter: Course Context
-                    if(data.subcourseCode && data.subcourseCode !== activeCourseContext.subcode) return;
-                    
-                    // Filter: Type
-                    if(!qTypes.includes(data.type)) return;
-
-                    // Filter: Folder Hierarchy (Only for Videos tab)
-                    if(tabName === 'videos') {
-                        if(currentFolderId === null) {
-                            if(data.parentId) return; // Only show root items
-                        } else {
-                            if(data.parentId !== currentFolderId) return; // Only show items in current folder
-                        }
+                    if(!data.subcourseCode || data.subcourseCode === activeCourseContext.subcode) {
+                        items.push({id: d.id, ...data});
                     }
-
-                    items.push({id: d.id, ...data});
                 });
 
-                // SORTING: Priority order (Low to High), then Date
-                items.sort((a, b) => {
-                    const orderA = a.order || 9999;
-                    const orderB = b.order || 9999;
-                    if(orderA !== orderB) return orderA - orderB;
-                    return new Date(b.createdAt) - new Date(a.createdAt);
-                });
+                // *** FIX: SORTING DONE HERE INSTEAD OF DB ***
+                items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
                 // --- TAB RENDERING ---
 
@@ -583,11 +545,7 @@
                         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-4">
                             <div class="flex justify-between items-start mb-2">
                                 <h4 class="font-bold text-slate-800 text-lg">${item.title}</h4>
-                                ${isAdmin ? `
-                                <div class="flex gap-2">
-                                    <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-400 hover:text-brand-primary text-xs"><i class="fas fa-pencil-alt"></i></button>
-                                    <button onclick="deleteContent('${item.id}', 'home')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>
-                                </div>` : ''}
+                                ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'home')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                             <p class="text-slate-600 leading-relaxed whitespace-pre-wrap">${item.content}</p>
                             <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">${new Date(item.createdAt).toLocaleDateString()}</p>
@@ -611,73 +569,33 @@
                         </div>`;
 
                 } else if(tabName === 'videos') {
-                    // Breadcrumbs UI
-                    let breadcrumbHtml = '';
-                    if(currentFolderId) {
-                        breadcrumbHtml = `<div class="flex items-center gap-2 mb-6 text-sm font-bold text-slate-500 fade-in">
-                            <span onclick="navigateToFolder(null)" class="cursor-pointer hover:text-brand-primary">Home</span>
-                            ${breadcrumbs.map((b, i) => `
-                                <i class="fas fa-chevron-right text-[10px]"></i>
-                                <span onclick="navigateToFolder('${b.id}', ${i})" class="cursor-pointer hover:text-brand-primary">${b.title}</span>
-                            `).join('')}
-                        </div>`;
-                    }
-
                     const grid = items.map(item => {
-                        if(item.type === 'folder') {
-                            // FOLDER CARD
-                            return `
-                            <div onclick="navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 rounded-xl p-6 border border-yellow-100 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition flex flex-col items-center justify-center text-center group relative">
-                                <div class="text-4xl text-yellow-400 mb-2 group-hover:scale-110 transition"><i class="fas fa-folder"></i></div>
-                                <h4 class="font-bold text-slate-800 line-clamp-1">${item.title}</h4>
-                                <span class="text-[10px] text-yellow-600 font-bold uppercase tracking-wider">Folder</span>
-                                ${isAdmin ? `
-                                <div class="absolute top-2 right-2 flex gap-1 z-20" onclick="event.stopPropagation()">
-                                    <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-6 h-6 rounded-full bg-white text-slate-400 hover:text-brand-primary flex items-center justify-center shadow-sm"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                    <button onclick="deleteContent('${item.id}', 'videos')" class="w-6 h-6 rounded-full bg-white text-red-300 hover:text-red-500 flex items-center justify-center shadow-sm"><i class="fas fa-trash text-xs"></i></button>
-                                </div>` : ''}
-                            </div>`;
-                        } else {
-                            // VIDEO CARD
-                            let embedUrl = item.url || "";
-                            if(embedUrl.includes('watch?v=')) embedUrl = embedUrl.replace('watch?v=', 'embed/');
-                            else if(embedUrl.includes('youtu.be/')) embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+                        let embedUrl = item.url;
+                        if(item.url.includes('watch?v=')) embedUrl = item.url.replace('watch?v=', 'embed/');
+                        else if(item.url.includes('youtu.be/')) embedUrl = item.url.replace('youtu.be/', 'www.youtube.com/embed/');
 
-                            return `
-                            <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition">
-                                <div class="aspect-video bg-slate-900">
-                                    <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                        return `
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition">
+                            <div class="aspect-video bg-slate-900">
+                                <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-slate-800 line-clamp-2">${item.title}</h4>
+                                    ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'videos')" class="text-red-400 hover:text-red-600 ml-2"><i class="fas fa-trash"></i></button>` : ''}
                                 </div>
-                                <div class="p-4">
-                                    <div class="flex justify-between items-start gap-2">
-                                        <h4 class="font-bold text-slate-800 line-clamp-2 text-sm flex-1">${item.title}</h4>
-                                        ${isAdmin ? `
-                                        <div class="flex gap-2 shrink-0">
-                                            <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-400 hover:text-brand-primary"><i class="fas fa-pencil-alt"></i></button>
-                                            <button onclick="deleteContent('${item.id}', 'videos')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                                        </div>` : ''}
-                                    </div>
-                                    <p class="text-[10px] text-slate-400 mt-2 font-bold flex justify-between">
-                                        <span>${new Date(item.createdAt).toLocaleDateString()}</span>
-                                        ${item.order ? `<span class="bg-slate-100 px-1.5 rounded text-slate-500">#${item.order}</span>` : ''}
-                                    </p>
-                                </div>
-                            </div>`;
-                        }
+                                <p class="text-xs text-slate-500 mt-2">${new Date(item.createdAt).toLocaleDateString()}</p>
+                            </div>
+                        </div>`;
                     }).join('');
 
                     contentHtml = `
-                        ${breadcrumbHtml}
                         <div class="flex justify-between items-center mb-6 fade-in">
-                            <h2 class="text-xl font-bold text-slate-800">${currentFolderId ? 'Folder Contents' : 'Videos & Folders'}</h2>
-                            ${isAdmin ? `
-                            <div class="flex gap-2">
-                                <button onclick="openContentModal('folder')" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-yellow-200 transition"><i class="fas fa-folder-plus mr-2"></i> New Folder</button>
-                                <button onclick="openContentModal('video')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Upload Video</button>
-                            </div>` : ''}
+                            <h2 class="text-xl font-bold text-slate-800">Video Library</h2>
+                            ${isAdmin ? `<button onclick="openContentModal('video')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Add Video</button>` : ''}
                         </div>
                         ${items.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` : 
-                        `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-folder-open text-2xl"></i></div><p class="text-slate-500">This folder is empty.</p></div>`}
+                        `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-film text-2xl"></i></div><p class="text-slate-500">No videos yet.</p></div>`}
                     `;
 
                 } else if(tabName === 'summaries') {
@@ -692,9 +610,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <a href="${item.url}" target="_blank" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100">View</a>
-                                ${isAdmin ? `
-                                <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-primary rounded-lg border border-slate-100"><i class="fas fa-pencil-alt"></i></button>
-                                <button onclick="deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
+                                ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
                     `).join('');
@@ -711,11 +627,7 @@
                 } else if(tabName === 'hw') {
                     const list = items.map(item => `
                         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition relative">
-                            ${isAdmin ? `
-                            <div class="absolute top-4 right-4 flex gap-2">
-                                <button onclick="openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary"><i class="fas fa-pencil-alt"></i></button>
-                                <button onclick="deleteContent('${item.id}', 'hw')" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                            </div>` : ''}
+                            ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'hw')" class="absolute top-4 right-4 text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
                             <div class="flex items-start gap-4">
                                 <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fas fa-pencil-alt"></i></div>
                                 <div class="flex-1">
@@ -740,35 +652,19 @@
                 container.innerHTML = header + contentHtml;
 
             } catch(e) {
-                console.error(e);
+                console.error(e); // Added logging to see errors in console
                 container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content. <br> <span class="text-xs text-slate-400">${e.message}</span></div>`;
             }
         };
-
-        window.navigateToFolder = (id, breadcrumbIndex = null, title = null) => {
-            if(id === null) {
-                currentFolderId = null;
-                breadcrumbs = [];
-            } else if(breadcrumbIndex !== null) {
-                currentFolderId = id;
-                breadcrumbs = breadcrumbs.slice(0, breadcrumbIndex + 1);
-            } else {
-                currentFolderId = id;
-                breadcrumbs.push({ id, title });
-            }
-            renderTab('videos');
-        }
 
         // --- CONTENT MODAL & CRUD ---
         window.toggleContentModal = () => document.getElementById('content-modal').classList.toggle('hidden');
 
         window.openContentModal = (type) => {
             document.getElementById('content-type').value = type;
-            document.getElementById('content-edit-id').value = ""; // Clear edit ID
             document.getElementById('content-title').value = "";
             document.getElementById('content-body').value = "";
             document.getElementById('content-link').value = "";
-            document.getElementById('content-order').value = "1";
             
             const titleEl = document.getElementById('content-modal-title');
             const labelEl = document.getElementById('content-label');
@@ -787,11 +683,6 @@
                 labelEl.innerText = "YouTube URL";
                 body.classList.add('hidden');
                 link.classList.remove('hidden');
-            } else if(type === 'folder') {
-                titleEl.innerText = "Create New Folder";
-                labelEl.innerText = "Description (Optional)";
-                body.classList.remove('hidden');
-                link.classList.add('hidden');
             } else if(type === 'summary') {
                 titleEl.innerText = "Add Summary";
                 labelEl.innerText = "PDF/Drive URL";
@@ -807,60 +698,31 @@
             toggleContentModal();
         };
 
-        window.openEditContentModal = (itemStr) => {
-            const item = JSON.parse(decodeURIComponent(itemStr));
-            openContentModal(item.type); // Setup base UI
-            
-            document.getElementById('content-modal-title').innerText = "Edit Content";
-            document.getElementById('content-edit-id').value = item.id;
-            document.getElementById('content-title').value = item.title;
-            document.getElementById('content-body').value = item.content || "";
-            document.getElementById('content-link').value = item.url || "";
-            document.getElementById('content-order').value = item.order || 1;
-        };
-
         window.handleSaveContent = async () => {
             const type = document.getElementById('content-type').value;
-            const editId = document.getElementById('content-edit-id').value;
             const title = document.getElementById('content-title').value;
             const body = document.getElementById('content-body').value;
             const url = document.getElementById('content-link').value;
-            const order = parseInt(document.getElementById('content-order').value) || 1;
 
             if(!title) return showToast("Title required", "error");
             if((type === 'video' || type === 'summary') && !url) return showToast("URL required", "error");
 
             try {
-                const data = {
+                await addDoc(collection(db, "course_content"), {
                     courseId: activeCourseContext.id,
                     subcourseCode: activeCourseContext.subcode || null,
                     type,
                     title,
                     content: body,
                     url,
-                    order,
-                    // If creating new video/folder inside a folder
-                    parentId: currentFolderId, 
+                    createdAt: new Date().toISOString(),
                     authorId: currentUserData.uid
-                };
-
-                if(editId) {
-                    // Update
-                    await updateDoc(doc(db, "course_content", editId), {
-                        title, content: body, url, order
-                    });
-                    showToast("Updated successfully");
-                } else {
-                    // Create
-                    data.createdAt = new Date().toISOString();
-                    await addDoc(collection(db, "course_content"), data);
-                    showToast("Created successfully");
-                }
-
+                });
+                showToast("Posted successfully");
                 toggleContentModal();
                 
                 // Refresh current tab
-                const tabMap = { 'announcement': 'home', 'video': 'videos', 'folder': 'videos', 'summary': 'summaries', 'homework': 'hw' };
+                const tabMap = { 'announcement': 'home', 'video': 'videos', 'summary': 'summaries', 'homework': 'hw' };
                 renderTab(tabMap[type]);
 
             } catch(e) {
@@ -870,7 +732,7 @@
         };
 
         window.deleteContent = async (id, currentTab) => {
-            if(!confirm("Delete this item? If it's a folder, contents might be hidden.")) return;
+            if(!confirm("Delete this item?")) return;
             try {
                 await deleteDoc(doc(db, "course_content", id));
                 showToast("Deleted");
@@ -963,35 +825,12 @@
                 <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-th-large"></i> Courses</button>
                 <button onclick="renderApprovals()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-user-check"></i> Approvals</button>
             `;
-
-            // Make sure we have course names loaded
-            if(availableCourses.length === 0) {
-                const cSnap = await getDocs(query(collection(db, "courses")));
-                cSnap.forEach(d => availableCourses.push({id: d.id, ...d.data()}));
-            }
-
             const snap = await getDocs(query(collection(db, "users"), where("status", "==", "pending")));
             let html = `<div class="max-w-4xl mx-auto"><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests</h2><div class="space-y-4">`;
             if(snap.empty) html += `<p class="text-slate-400">No pending requests.</p>`;
-            
             snap.forEach(d => {
                 const u = d.data();
-                // FIND COURSE NAME
-                const course = availableCourses.find(c => c.id === u.courseId);
-                const courseName = course ? course.title : "Unknown Course";
-
-                html += `
-                <div class="bg-white p-5 rounded-xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h4 class="font-bold text-slate-900 text-lg">${u.name}</h4>
-                        <div class="flex flex-wrap gap-2 mt-1">
-                            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold"><i class="fas fa-phone-alt mr-1"></i> ${u.phone}</span>
-                            <span class="text-xs bg-blue-50 text-brand-primary px-2 py-0.5 rounded font-bold"><i class="fas fa-book mr-1"></i> ${courseName}</span>
-                            ${u.subcourseCode ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold">Group: ${u.subcourseCode}</span>` : ''}
-                        </div>
-                    </div>
-                    <button onclick="approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-green-100">Approve</button>
-                </div>`;
+                html += `<div class="bg-white p-5 rounded-xl border shadow-sm flex justify-between items-center"><div><h4 class="font-bold text-slate-900">${u.name}</h4><p class="text-xs text-slate-500 font-mono">${u.phone}</p>${u.subcourseCode ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-2 rounded">Code: ${u.subcourseCode}</span>` : ''}</div><button onclick="approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold">Approve</button></div>`;
             });
             html += `</div></div>`;
             document.getElementById('main-view').innerHTML = html;
