@@ -517,11 +517,12 @@
             // Fetch Content
             let contentHtml = '';
             try {
+                // *** FIX: REMOVED orderBy FROM QUERY TO PREVENT INDEX ERROR ***
+                // We sort in Javascript instead.
                 const q = query(
                     collection(db, "course_content"), 
                     where("courseId", "==", activeCourseContext.id),
-                    where("type", "==", dbType),
-                    orderBy("createdAt", "desc")
+                    where("type", "==", dbType)
                 );
                 
                 const snap = await getDocs(q);
@@ -529,11 +530,13 @@
                 
                 snap.forEach(d => {
                     const data = d.data();
-                    // Content is valid if it has no subcourseCode (global) OR matches the current subcourse
                     if(!data.subcourseCode || data.subcourseCode === activeCourseContext.subcode) {
                         items.push({id: d.id, ...data});
                     }
                 });
+
+                // *** FIX: SORTING DONE HERE INSTEAD OF DB ***
+                items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
                 // --- TAB RENDERING ---
 
@@ -649,8 +652,8 @@
                 container.innerHTML = header + contentHtml;
 
             } catch(e) {
-                console.error(e);
-                container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content.</div>`;
+                console.error(e); // Added logging to see errors in console
+                container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content. <br> <span class="text-xs text-slate-400">${e.message}</span></div>`;
             }
         };
 
