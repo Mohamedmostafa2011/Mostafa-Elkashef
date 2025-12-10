@@ -236,6 +236,35 @@
         </div>
     </div>
 
+    <!-- ================= ADD CONTENT MODAL ================= -->
+    <div id="content-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-xl font-display font-bold text-slate-900" id="content-modal-title">Add Content</h3>
+                <button onclick="toggleContentModal()" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <input type="hidden" id="content-type">
+                
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Headline</label>
+                    <input type="text" id="content-title" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition" placeholder="e.g. Session 1 Recap">
+                </div>
+
+                <!-- Dynamic Input Area -->
+                <div id="content-input-area">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="content-label">Content</label>
+                    <textarea id="content-body" rows="4" class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand-primary transition" placeholder="Type here..."></textarea>
+                    <input type="text" id="content-link" class="hidden w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand-primary transition" placeholder="https://...">
+                </div>
+
+                <button onclick="handleSaveContent()" class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
+                    Post Content
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 
@@ -325,6 +354,7 @@
 
             const phone = regPhone.getNumber();
             const email = phone.replace('+', '') + "@igmath.com";
+            // Hardcoded admin for demo: +11234567890
             const isAdmin = phone === '+11234567890';
 
             try {
@@ -368,7 +398,6 @@
             const container = document.getElementById('main-view');
             container.innerHTML = '<div class="flex justify-center h-64 items-center"><span class="spinner border-slate-300 border-t-brand-primary w-8 h-8"></span></div>';
 
-            // Sorted Oldest First
             const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt", "asc")));
             
             let html = `
@@ -438,13 +467,17 @@
             }
         };
 
-        // --- COURSE DASHBOARD (NEW) ---
+        // --- COURSE DASHBOARD (NEW ACTIVE LOGIC) ---
         window.openCourseDashboard = (id, title, subcode) => {
             activeCourseContext = { id, title, subcode };
             
+            const isAdmin = currentUserData.role === 'admin';
+            const backBtn = isAdmin 
+                ? `<button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-sm mb-6"><i class="fas fa-arrow-left"></i> Back to Hub</button>`
+                : `<div class="px-4 mb-4 text-xs font-bold text-slate-300 uppercase tracking-widest">Student View</div>`;
+
             document.getElementById('nav-links').innerHTML = `
-                <button onclick="renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-sm mb-6"><i class="fas fa-arrow-left"></i> Back to Hub</button>
-                
+                ${backBtn}
                 <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
                 <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
                 <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Recorded Videos</button>
@@ -454,7 +487,8 @@
             renderTab('home');
         };
 
-        window.renderTab = (tabName) => {
+        window.renderTab = async (tabName) => {
+            // Update Active Tab UI
             document.querySelectorAll('.tab-btn').forEach(b => {
                 if(b.getAttribute('onclick').includes(tabName)) {
                     b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors";
@@ -464,68 +498,246 @@
             });
 
             const container = document.getElementById('main-view');
+            container.innerHTML = '<div class="flex justify-center h-64 items-center"><span class="spinner border-slate-300 border-t-brand-primary w-8 h-8"></span></div>';
+
             const { title, subcode } = activeCourseContext;
-            
+            const isAdmin = currentUserData.role === 'admin';
+
+            // Common Header
             const header = `
                 <div class="mb-8 pb-6 border-b border-slate-200">
                     <h1 class="text-3xl font-bold text-slate-900 font-display">${title} <span class="text-brand-primary ml-2">${subcode ? subcode : ''}</span></h1>
-                    <p class="text-slate-500 mt-1">Manage content for this group.</p>
+                    <p class="text-slate-500 mt-1">${isAdmin ? 'Manage content for this group.' : 'Welcome to your learning dashboard.'}</p>
                 </div>`;
 
-            let content = '';
-            
-            if(tabName === 'home') {
-                content = `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
-                        <div class="md:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold text-lg text-slate-800">Announcements</h3>
-                                <button class="text-sm text-brand-primary font-bold hover:underline">+ New Post</button>
-                            </div>
-                            <div class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-400">No announcements yet.</div>
-                        </div>
-                        <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden">
-                            <h3 class="font-bold text-lg relative z-10">Next Session</h3>
-                            <p class="text-blue-100 text-sm relative z-10 mt-1">Schedule coming soon.</p>
-                            <div class="absolute -right-4 -bottom-4 text-6xl opacity-20"><i class="fas fa-clock"></i></div>
-                        </div>
-                    </div>`;
-            } else if(tabName === 'videos') {
-                content = `
-                    <div class="flex justify-between items-center mb-6 fade-in">
-                        <h2 class="text-xl font-bold text-slate-800">Video Library</h2>
-                        <button class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Upload Video</button>
-                    </div>
-                    <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm">
-                        <div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-film text-2xl"></i></div>
-                        <p class="text-slate-500">No videos uploaded yet.</p>
-                    </div>`;
-            } else if(tabName === 'summaries') {
-                content = `
-                    <div class="flex justify-between items-center mb-6 fade-in">
-                        <h2 class="text-xl font-bold text-slate-800">Class Summaries</h2>
-                        <button class="bg-brand-dark text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition"><i class="fas fa-file-upload mr-2"></i> Upload PDF</button>
-                    </div>
-                    <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm">
-                        <div class="inline-block p-4 bg-green-50 rounded-full text-green-400 mb-3"><i class="fas fa-file-pdf text-2xl"></i></div>
-                        <p class="text-slate-500">No summaries available.</p>
-                    </div>`;
-            } else if(tabName === 'hw') {
-                content = `
-                    <div class="flex justify-between items-center mb-6 fade-in">
-                        <h2 class="text-xl font-bold text-slate-800">Homework</h2>
-                        <button class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-600 transition"><i class="fas fa-plus mr-2"></i> New Task</button>
-                    </div>
-                    <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm">
-                        <div class="inline-block p-4 bg-amber-50 rounded-full text-amber-400 mb-3"><i class="fas fa-tasks text-2xl"></i></div>
-                        <p class="text-slate-500">No active homework.</p>
-                    </div>`;
-            }
+            // Mapping for database types
+            const typeMap = { 'home': 'announcement', 'videos': 'video', 'summaries': 'summary', 'hw': 'homework' };
+            const dbType = typeMap[tabName];
 
-            container.innerHTML = header + content;
+            // Fetch Content
+            let contentHtml = '';
+            try {
+                const q = query(
+                    collection(db, "course_content"), 
+                    where("courseId", "==", activeCourseContext.id),
+                    where("type", "==", dbType),
+                    orderBy("createdAt", "desc")
+                );
+                
+                const snap = await getDocs(q);
+                let items = [];
+                
+                snap.forEach(d => {
+                    const data = d.data();
+                    // Content is valid if it has no subcourseCode (global) OR matches the current subcourse
+                    if(!data.subcourseCode || data.subcourseCode === activeCourseContext.subcode) {
+                        items.push({id: d.id, ...data});
+                    }
+                });
+
+                // --- TAB RENDERING ---
+
+                if(tabName === 'home') {
+                    const posts = items.map(item => `
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-bold text-slate-800 text-lg">${item.title}</h4>
+                                ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'home')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                            <p class="text-slate-600 leading-relaxed whitespace-pre-wrap">${item.content}</p>
+                            <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">${new Date(item.createdAt).toLocaleDateString()}</p>
+                        </div>
+                    `).join('');
+
+                    contentHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
+                            <div class="md:col-span-2">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-lg text-slate-800">Announcements</h3>
+                                    ${isAdmin ? `<button onclick="openContentModal('announcement')" class="text-sm text-brand-primary font-bold hover:underline">+ New Post</button>` : ''}
+                                </div>
+                                ${items.length ? posts : `<div class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-400">No announcements yet.</div>`}
+                            </div>
+                            <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden h-fit">
+                                <h3 class="font-bold text-lg relative z-10">Math Info</h3>
+                                <p class="text-blue-100 text-sm relative z-10 mt-1">Check videos for latest recordings.</p>
+                                <div class="absolute -right-4 -bottom-4 text-6xl opacity-20"><i class="fas fa-clock"></i></div>
+                            </div>
+                        </div>`;
+
+                } else if(tabName === 'videos') {
+                    const grid = items.map(item => {
+                        let embedUrl = item.url;
+                        if(item.url.includes('watch?v=')) embedUrl = item.url.replace('watch?v=', 'embed/');
+                        else if(item.url.includes('youtu.be/')) embedUrl = item.url.replace('youtu.be/', 'www.youtube.com/embed/');
+
+                        return `
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition">
+                            <div class="aspect-video bg-slate-900">
+                                <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-slate-800 line-clamp-2">${item.title}</h4>
+                                    ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'videos')" class="text-red-400 hover:text-red-600 ml-2"><i class="fas fa-trash"></i></button>` : ''}
+                                </div>
+                                <p class="text-xs text-slate-500 mt-2">${new Date(item.createdAt).toLocaleDateString()}</p>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    contentHtml = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-xl font-bold text-slate-800">Video Library</h2>
+                            ${isAdmin ? `<button onclick="openContentModal('video')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload mr-2"></i> Add Video</button>` : ''}
+                        </div>
+                        ${items.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` : 
+                        `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-film text-2xl"></i></div><p class="text-slate-500">No videos yet.</p></div>`}
+                    `;
+
+                } else if(tabName === 'summaries') {
+                    const list = items.map(item => `
+                        <div class="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:border-brand-primary/30 transition group">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center text-lg"><i class="fas fa-file-pdf"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800">${item.title}</h4>
+                                    <p class="text-xs text-slate-500">${new Date(item.createdAt).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="${item.url}" target="_blank" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100">View</a>
+                                ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    contentHtml = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-xl font-bold text-slate-800">Class Summaries</h2>
+                            ${isAdmin ? `<button onclick="openContentModal('summary')" class="bg-brand-dark text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition"><i class="fas fa-file-upload mr-2"></i> Add PDF Link</button>` : ''}
+                        </div>
+                        <div class="space-y-3 fade-in">
+                            ${items.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No summaries found.</div>`}
+                        </div>`;
+
+                } else if(tabName === 'hw') {
+                    const list = items.map(item => `
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition relative">
+                            ${isAdmin ? `<button onclick="deleteContent('${item.id}', 'hw')" class="absolute top-4 right-4 text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fas fa-pencil-alt"></i></div>
+                                <div class="flex-1">
+                                    <h4 class="font-bold text-slate-800 text-lg mb-1">${item.title}</h4>
+                                    <p class="text-slate-600 text-sm mb-3 whitespace-pre-wrap">${item.content}</p>
+                                    ${item.url ? `<a href="${item.url}" target="_blank" class="inline-flex items-center text-brand-primary font-bold text-sm hover:underline"><i class="fas fa-link mr-1"></i> Attached Resource</a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    contentHtml = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-xl font-bold text-slate-800">Homework & Tasks</h2>
+                            ${isAdmin ? `<button onclick="openContentModal('homework')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-600 transition"><i class="fas fa-plus mr-2"></i> New Task</button>` : ''}
+                        </div>
+                        <div class="space-y-4 fade-in">
+                            ${items.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No active homework.</div>`}
+                        </div>`;
+                }
+
+                container.innerHTML = header + contentHtml;
+
+            } catch(e) {
+                console.error(e);
+                container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content.</div>`;
+            }
         };
 
-        // --- MODAL & SAVING ---
+        // --- CONTENT MODAL & CRUD ---
+        window.toggleContentModal = () => document.getElementById('content-modal').classList.toggle('hidden');
+
+        window.openContentModal = (type) => {
+            document.getElementById('content-type').value = type;
+            document.getElementById('content-title').value = "";
+            document.getElementById('content-body').value = "";
+            document.getElementById('content-link').value = "";
+            
+            const titleEl = document.getElementById('content-modal-title');
+            const labelEl = document.getElementById('content-label');
+            const body = document.getElementById('content-body');
+            const link = document.getElementById('content-link');
+
+            // Reset visibility
+            body.classList.remove('hidden');
+            link.classList.add('hidden');
+
+            if(type === 'announcement') {
+                titleEl.innerText = "New Announcement";
+                labelEl.innerText = "Message";
+            } else if(type === 'video') {
+                titleEl.innerText = "Add Video";
+                labelEl.innerText = "YouTube URL";
+                body.classList.add('hidden');
+                link.classList.remove('hidden');
+            } else if(type === 'summary') {
+                titleEl.innerText = "Add Summary";
+                labelEl.innerText = "PDF/Drive URL";
+                body.classList.add('hidden');
+                link.classList.remove('hidden');
+            } else if(type === 'homework') {
+                titleEl.innerText = "Assign Homework";
+                labelEl.innerText = "Instructions";
+                link.classList.remove('hidden');
+                link.placeholder = "Optional Link (e.g. Worksheet URL)";
+            }
+            
+            toggleContentModal();
+        };
+
+        window.handleSaveContent = async () => {
+            const type = document.getElementById('content-type').value;
+            const title = document.getElementById('content-title').value;
+            const body = document.getElementById('content-body').value;
+            const url = document.getElementById('content-link').value;
+
+            if(!title) return showToast("Title required", "error");
+            if((type === 'video' || type === 'summary') && !url) return showToast("URL required", "error");
+
+            try {
+                await addDoc(collection(db, "course_content"), {
+                    courseId: activeCourseContext.id,
+                    subcourseCode: activeCourseContext.subcode || null,
+                    type,
+                    title,
+                    content: body,
+                    url,
+                    createdAt: new Date().toISOString(),
+                    authorId: currentUserData.uid
+                });
+                showToast("Posted successfully");
+                toggleContentModal();
+                
+                // Refresh current tab
+                const tabMap = { 'announcement': 'home', 'video': 'videos', 'summary': 'summaries', 'homework': 'hw' };
+                renderTab(tabMap[type]);
+
+            } catch(e) {
+                console.error(e);
+                showToast("Error saving content", "error");
+            }
+        };
+
+        window.deleteContent = async (id, currentTab) => {
+            if(!confirm("Delete this item?")) return;
+            try {
+                await deleteDoc(doc(db, "course_content", id));
+                showToast("Deleted");
+                renderTab(currentTab);
+            } catch(e) { showToast("Error deleting", "error"); }
+        };
+
+        // --- COURSE MANAGEMENT (EXISTING) ---
         window.toggleCourseModal = () => document.getElementById('course-modal').classList.toggle('hidden');
 
         window.openModalForCreate = () => {
@@ -628,17 +840,9 @@
             const cSnap = await getDoc(doc(db, "courses", currentUserData.courseId));
             const title = cSnap.exists() ? cSnap.data().title : "Unknown Course";
             
+            // Setup context and reuse the existing renderer
             activeCourseContext = { id: currentUserData.courseId, title, subcode: currentUserData.subcourseCode };
-            
-            // Set Student Nav
-            document.getElementById('nav-links').innerHTML = `
-                <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Menu</div>
-                <button onclick="renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
-                <button onclick="renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
-                <button onclick="renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
-                <button onclick="renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
-            `;
-            renderTab('home');
+            openCourseDashboard(currentUserData.courseId, title, currentUserData.subcourseCode);
         };
 
         function showToast(msg, type='success'){
