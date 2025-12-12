@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mr. Mostafa Elkashef | IG Math</title>
+    <title>Mostafa Elkashef</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -82,17 +82,20 @@
 
         <div class="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-2xl relative overflow-hidden fade-in mx-4 max-h-[95vh] overflow-y-auto">
             
+            <!-- Branding Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-display font-bold text-slate-900 tracking-tight">Mostafa Elkashef</h1>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Math Platform</p>
+            </div>
+
             <!-- Tabs -->
             <div class="flex p-1 bg-slate-100 rounded-xl mb-8">
                 <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg shadow-sm bg-white text-brand-primary transition-all">Login</button>
                 <button onclick="switchTab('signup')" id="tab-signup" class="flex-1 py-2.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Sign Up</button>
             </div>
 
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-14 h-14 bg-brand-primary text-white rounded-2xl text-2xl mb-3 shadow-lg shadow-blue-200 transform -rotate-3">
-                    <i class="fas fa-square-root-variable"></i>
-                </div>
-                <h1 class="text-2xl font-display font-bold text-slate-900 tracking-tight" id="auth-title">Welcome Back</h1>
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-display font-medium text-slate-500 tracking-tight" id="auth-title">Welcome Back</h2>
             </div>
 
             <!-- Login Form -->
@@ -172,7 +175,7 @@
             <div class="h-20 flex items-center px-6 gap-3 border-b border-slate-50">
                 <div class="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-200"><i class="fas fa-cube"></i></div>
                 <div>
-                    <h1 class="font-display font-bold text-slate-900 text-lg leading-none">IG Math</h1>
+                    <h1 class="font-display font-bold text-slate-900 text-lg leading-none">Mostafa Elkashef</h1>
                     <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Platform</span>
                 </div>
                 <button id="close-sidebar" class="md:hidden ml-auto text-slate-400"><i class="fas fa-times"></i></button>
@@ -318,14 +321,28 @@
 
         // --- AUTH LOGIC ---
         window.switchTab = async (tab) => {
+            const tabLogin = document.getElementById('tab-login');
+            const tabSignup = document.getElementById('tab-signup');
+            const activeClass = "flex-1 py-2.5 text-sm font-bold rounded-lg shadow-sm bg-white text-brand-primary transition-all";
+            const inactiveClass = "flex-1 py-2.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all";
+
             if(tab === 'login') {
                 document.getElementById('login-form').classList.remove('hidden');
                 document.getElementById('signup-form').classList.add('hidden');
                 document.getElementById('auth-title').innerText = "Welcome Back";
+                
+                // Style Tabs
+                tabLogin.className = activeClass;
+                tabSignup.className = inactiveClass;
             } else {
                 document.getElementById('login-form').classList.add('hidden');
                 document.getElementById('signup-form').classList.remove('hidden');
                 document.getElementById('auth-title').innerText = "Join Class";
+                
+                // Style Tabs
+                tabSignup.className = activeClass;
+                tabLogin.className = inactiveClass;
+                
                 await loadCoursesForSignup();
             }
         };
