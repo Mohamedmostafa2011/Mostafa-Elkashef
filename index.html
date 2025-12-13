@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mostafa Elkashef</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- SortableJS for Mobile/Touch Dragging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Phone Input CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { dark: '#0f172a', primary: '#2563eb', secondary: '#4338ca', accent: '#f59e0b' },
+                        surface: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-surface text-slate-800 h-screen overflow-hidden selection:bg-brand-primary selection:text-white">
+
+    <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- ================= AUTH SCREEN ================= -->
+    <div id="auth-screen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div class="absolute inset-0 opacity-10"
+            style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+
+        <div
+            class="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-2xl relative overflow-hidden fade-in mx-4 max-h-[95vh] overflow-y-auto">
+
+            <!-- Branding Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-display font-bold text-slate-900 tracking-tight">Mostafa Elkashef</h1>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Math Platform</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex p-1 bg-slate-100 rounded-xl mb-8">
+                <button onclick="switchTab('login')" id="tab-login"
+                    class="flex-1 py-2.5 text-sm font-bold rounded-lg shadow-sm bg-white text-brand-primary transition-all">Login</button>
+                <button onclick="switchTab('signup')" id="tab-signup"
+                    class="flex-1 py-2.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Create
+                    an account</button>
+            </div>
+
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-display font-medium text-slate-500 tracking-tight" id="auth-title">Welcome Back
+                </h2>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form" class="space-y-5">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <input type="tel" id="login-phone">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Password</label>
+                    <input type="password" id="login-pass"
+                        class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary focus:ring-2 focus:ring-brand-light outline-none transition"
+                        placeholder="••••••••">
+                </div>
+                <button id="btn-login"
+                    class="w-full bg-brand-primary text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-xl shadow-blue-200 active:scale-[0.98]">
+                    Log In
+                </button>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="space-y-5 hidden">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Full Name</label>
+                    <input type="text" id="reg-name"
+                        class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none"
+                        placeholder="e.g. Ahmed Ali">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Select Course</label>
+                    <div class="relative">
+                        <select id="reg-course"
+                            class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:border-brand-primary outline-none appearance-none cursor-pointer">
+                            <option value="" disabled selected>Loading Courses...</option>
+                        </select>
+                        <div
+                            class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="course-code-field" class="hidden bg-amber-50 p-4 rounded-xl border border-amber-100">
+                    <label class="text-xs font-bold text-amber-600 uppercase mb-1 block"><i
+                            class="fas fa-lock mr-1"></i> Group Code Required</label>
+                    <input type="text" id="reg-code"
+                        class="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-lg text-sm font-bold text-amber-800 placeholder-amber-300 focus:ring-2 focus:ring-amber-100 outline-none uppercase tracking-widest"
+                        placeholder="e.g. 10A">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <input type="tel" id="reg-phone">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Create Password</label>
+                    <input type="password" id="reg-pass"
+                        class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none"
+                        placeholder="Min. 6 characters">
+                </div>
+                <button id="btn-create-account"
+                    class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition shadow-xl active:scale-[0.98]">
+                    Create Account
+                </button>
+                <p class="text-[10px] text-slate-400 text-center">Admin approval required for access.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PENDING SCREEN ================= -->
+    <div id="pending-screen"
+        class="fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-50 hidden text-center p-6">
+        <div
+            class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-4xl mb-6 shadow-xl text-amber-500 animate-pulse">
+            <i class="fas fa-hourglass-half"></i>
+        </div>
+        <h1 class="text-3xl font-display font-bold text-slate-900 mb-2">Approval Pending</h1>
+        <p class="text-slate-500 max-w-sm mb-8 leading-relaxed">
+            Your account has been created! Please contact <b class="text-slate-800">Mr. Mostafa</b> to verify your
+            enrollment and activate your access.
+        </p>
+        <div class="flex gap-3">
+            <button onclick="location.reload()"
+                class="bg-brand-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-lg hover:bg-blue-600">Refresh
+                Status</button>
+            <button id="logout-pending"
+                class="bg-white border border-slate-200 text-red-500 px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-red-50">Log
+                Out</button>
+        </div>
+    </div>
+
+    <!-- ================= APP SCREEN ================= -->
+    <div id="app-screen" class="hidden flex h-screen w-full relative">
+        <!-- Sidebar -->
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 flex flex-col shadow-2xl md:shadow-none">
+            <div class="h-20 flex items-center px-6 gap-3 border-b border-slate-50">
+                <div
+                    class="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-200">
+                    <i class="fas fa-cube"></i>
+                </div>
+                <div>
+                    <h1 class="font-display font-bold text-slate-900 text-lg leading-none">Mostafa Elkashef</h1>
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Platform</span>
+                </div>
+                <button id="close-sidebar" class="md:hidden ml-auto text-slate-400"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <nav id="nav-links" class="flex-1 p-4 space-y-1 overflow-y-auto"></nav>
+            <div class="p-4 border-t border-slate-50 dark:border-slate-800">
+                <button onclick="toggleDarkMode()"
+                    class="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-brand-primary hover:bg-slate-50 rounded-xl text-sm font-bold py-3 transition mb-2">
+                    <i id="dark-mode-icon" class="fas fa-moon"></i> <span id="dark-mode-text">Dark Mode</span>
+                </button>
+                <button id="logout-btn"
+                    class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold py-3 transition">
+                    <i class="fas fa-sign-out-alt"></i> Log Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col md:ml-72 min-w-0 bg-surface dark:bg-slate-950">
+            <header
+                class="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 sticky top-0 z-30">
+                <button id="open-sidebar" class="md:hidden p-2 -ml-2 text-slate-600"><i
+                        class="fas fa-bars text-xl"></i></button>
+                <div class="ml-auto flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                        <p id="header-user" class="text-sm font-bold text-slate-900 dark:text-white">Loading...</p>
+                        <p id="header-role" class="text-xs text-slate-500 dark:text-slate-400 font-medium">...</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 p-0.5">
+                        <div
+                            class="w-full h-full bg-white rounded-full flex items-center justify-center text-brand-primary font-bold text-lg">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div id="main-view" class="flex-1 overflow-y-auto p-6 md:p-10"></div>
+        </main>
+        <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
+    </div>
+
+    <!-- ================= CREATE/EDIT COURSE MODAL ================= -->
+    <div id="course-modal"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="modal-title">Create New
+                    Course</h3>
+                <button onclick="toggleCourseModal()"
+                    class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <input type="hidden" id="edit-course-id">
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Course Title</label>
+                    <input type="text" id="new-course-title"
+                        class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
+                        placeholder="e.g. IGCSE Year 10 - Mechanics">
+                </div>
+
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <label
+                        class="text-xs font-bold text-brand-primary uppercase tracking-wider flex items-center gap-2 mb-2">
+                        <i class="fas fa-layer-group"></i> Subcourses (Codes)
+                    </label>
+                    <div id="subcourse-container" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        <!-- Dynamic inputs will appear here -->
+                    </div>
+                    <p class="text-[10px] text-blue-400 mt-3">Type a code (e.g. "10A") to add it. Use the trash icon to
+                        remove.</p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="handleSaveCourse()"
+                        class="flex-1 bg-brand-dark text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition shadow-lg flex justify-center items-center gap-2">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button onclick="handleDeleteCourse()" id="btn-delete-course"
+                        class="hidden px-4 bg-red-50 border border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-100 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADD CONTENT MODAL ================= -->
+    <div id="content-modal"
+        class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="content-modal-title">Add
+                    Content</h3>
+                <button onclick="toggleContentModal()"
+                    class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <input type="hidden" id="content-type">
+                <input type="hidden" id="content-edit-id">
+
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
+                        <input type="text" id="content-title"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
+                            placeholder="e.g. Session 1">
+                    </div>
+                    <div class="w-24 hidden">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Order</label>
+                        <input type="number" id="content-order"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition"
+                            placeholder="1" value="1">
+                    </div>
+                </div>
+
+                <!-- Dynamic Input Area -->
+                <div id="content-input-area">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider"
+                        id="content-label">Content</label>
+                    <textarea id="content-body" rows="4"
+                        class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand-primary transition"
+                        placeholder="Type here..."></textarea>
+                    <input type="text" id="content-link"
+                        class="hidden w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand-primary transition"
+                        placeholder="https://...">
+                </div>
+
+                <button onclick="handleSaveContent()"
+                    class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
+                    Save / Post
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+
+    <!-- Main Application Logic -->
+    <script type="module" src="js/main.js"></script>
+
+</body>
+
+</html>
