@@ -39,15 +39,15 @@ export function generateVideoCardHtml(item, isAdmin) {
         const folderHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-yellow-300 hover:text-yellow-600 p-1.5 touch-action-none"><i class="fas fa-grip-vertical"></i></div>` : '';
         // Using window functions in onclick strings (bridge required in main.js)
         return `
-        <div data-id="${item.id}" onclick="window.navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 rounded-xl p-6 border border-yellow-100 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition flex flex-col items-center justify-center text-center group relative select-none h-full">
+        <div data-id="${item.id}" onclick="window.navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 dark:bg-yellow-950/30 rounded-xl p-6 border border-yellow-100 dark:border-yellow-900 cursor-pointer hover:shadow-lg hover:border-yellow-300 dark:hover:border-yellow-600 transition flex flex-col items-center justify-center text-center group relative select-none h-full">
             ${folderHandle}
             <div class="text-4xl text-yellow-400 mb-2 group-hover:scale-110 transition"><i class="fas fa-folder"></i></div>
-            <h4 class="font-bold text-slate-800 line-clamp-1">${item.title}</h4>
-            <span class="text-[10px] text-yellow-600 font-bold uppercase tracking-wider">Folder</span>
+            <h4 class="font-bold text-yellow-950 dark:text-yellow-50 line-clamp-1">${item.title}</h4>
+            <span class="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider">Folder</span>
             ${isAdmin ? `
             <div class="absolute top-2 right-2 flex gap-1 z-20" onclick="event.stopPropagation()">
-                <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-6 h-6 rounded-full bg-white text-slate-400 hover:text-brand-primary flex items-center justify-center shadow-sm"><i class="fas fa-pencil-alt text-xs"></i></button>
-                <button onclick="window.deleteContent('${item.id}', 'videos')" class="w-6 h-6 rounded-full bg-white text-red-300 hover:text-red-500 flex items-center justify-center shadow-sm"><i class="fas fa-trash text-xs"></i></button>
+                <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-primary flex items-center justify-center shadow-sm"><i class="fas fa-pencil-alt text-xs"></i></button>
+                <button onclick="window.deleteContent('${item.id}', 'videos')" class="w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-red-300 hover:text-red-500 flex items-center justify-center shadow-sm"><i class="fas fa-trash text-xs"></i></button>
             </div>` : ''}
         </div>`;
     } else {
@@ -62,14 +62,14 @@ export function generateVideoCardHtml(item, isAdmin) {
         }
 
         return `
-        <div data-id="${item.id}" class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition group relative">
+        <div data-id="${item.id}" class="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-lg transition group relative">
             ${dragHandle}
             <div class="aspect-video bg-slate-900">
                 <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
             </div>
             <div class="p-4">
                 <div class="flex justify-between items-start gap-2">
-                    <h4 class="font-bold text-slate-800 line-clamp-2 text-sm flex-1">${item.title}</h4>
+                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm flex-1">${item.title}</h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
                         <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-400 hover:text-brand-primary"><i class="fas fa-pencil-alt"></i></button>
