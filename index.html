@@ -189,6 +189,10 @@
                     class="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-brand-primary hover:bg-slate-50 rounded-xl text-sm font-bold py-3 transition mb-2">
                     <i id="dark-mode-icon" class="fas fa-moon"></i> <span id="dark-mode-text">Dark Mode</span>
                 </button>
+                <button onclick="window.toggleSettingsModal()"
+                    class="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-brand-primary hover:bg-slate-50 rounded-xl text-sm font-bold py-3 transition mb-2">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </button>
                 <button id="logout-btn"
                     class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold py-3 transition">
                     <i class="fas fa-sign-out-alt"></i> Log Out
@@ -299,6 +303,27 @@
                     </div>
                 </div>
 
+                <!-- File Upload Area -->
+                <div id="file-upload-section" class="hidden">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Upload File
+                        (Unlimited)</label>
+                    <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 transition cursor-pointer relative"
+                        id="drop-zone">
+                        <input type="file" id="content-file" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <div class="text-slate-400">
+                            <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
+                            <p class="text-xs font-bold" id="file-label">Click or drag file here</p>
+                        </div>
+                    </div>
+                    <div id="upload-progress" class="hidden mt-2">
+                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-brand-primary w-0 transition-all duration-300" style="width: 0%">
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-right text-brand-primary font-bold mt-1">Uploading...</p>
+                    </div>
+                </div>
+
                 <!-- Dynamic Input Area -->
                 <div id="content-input-area">
                     <label class="text-xs font-bold text-slate-500 uppercase tracking-wider"
@@ -314,6 +339,42 @@
                 <button onclick="handleSaveContent()"
                     class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
                     Save / Post
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SETTINGS MODAL ================= -->
+    <div id="settings-modal"
+        class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white">Settings</h3>
+                <button onclick="window.toggleSettingsModal()"
+                    class="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+                    <h4 class="text-sm font-bold text-brand-primary mb-1">Hugging Face Storage</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Configure your unlimited storage backend.</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Repository ID</label>
+                    <input type="text" id="hf-repo"
+                        class="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary font-mono"
+                        placeholder="username/dataset-name">
+                    <p class="text-[10px] text-slate-400 mt-1">Found at top of your HF Dataset page.</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Write Token</label>
+                    <input type="password" id="hf-token"
+                        class="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary font-mono"
+                        placeholder="hf_...">
+                </div>
+                <button onclick="window.saveSettings()"
+                    class="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition shadow-lg mt-2">
+                    Save Config
                 </button>
             </div>
         </div>

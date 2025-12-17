@@ -52,6 +52,7 @@ export function generateVideoCardHtml(item, isAdmin) {
         </div>`;
     } else {
         let embedUrl = item.url || "";
+        let isDirectFile = false;
         if (embedUrl.includes('drive.google.com')) {
             embedUrl = embedUrl.split('?')[0];
             embedUrl = embedUrl.replace(/\/view$/, '/preview').replace(/\/edit$/, '/preview');
@@ -59,13 +60,19 @@ export function generateVideoCardHtml(item, isAdmin) {
             embedUrl = embedUrl.replace('watch?v=', 'embed/');
         } else if (embedUrl.includes('youtu.be/')) {
             embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+        } else {
+            // Assume direct file (Hugging Face or other direct link)
+            isDirectFile = true;
         }
 
         return `
         <div data-id="${item.id}" class="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-lg transition group relative">
             ${dragHandle}
-            <div class="aspect-video bg-slate-900">
-                <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+            <div class="aspect-video bg-slate-900 flex items-center justify-center">
+                ${isDirectFile
+                ? `<video src="${embedUrl}" class="w-full h-full block" controls playsinline controlsList="nodownload"></video>`
+                : `<iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`
+            }
             </div>
             <div class="p-4">
                 <div class="flex justify-between items-start gap-2">

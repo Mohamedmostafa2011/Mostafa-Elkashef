@@ -3,6 +3,7 @@ import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, a
 import { state } from "./state.js";
 import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils.js";
 import { renderAdminHome } from "./admin.js";
+import { uploadToHuggingFace } from "./hf_storage.js";
 
 // --- DASHBOARD: NAVIGATION ---
 export function openCourseDashboard(id, title, subcode) {
@@ -146,6 +147,10 @@ async function _renderTabInternal(tabName) {
                         </div>` : ''}
                     </div>
                     <p class="text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">${item.content}</p>
+                    ${item.url ? (item.url.match(/\.(jpeg|jpg|gif|png)$/) != null ?
+                    `<img src="${item.url}" class="mt-4 rounded-xl max-h-96 w-full object-cover border border-slate-100 dark:border-slate-700" loading="lazy">` :
+                    `<div class="mt-4"><a href="${item.url}" target="_blank" class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold text-brand-primary hover:bg-slate-100 transition"><i class="fas fa-download"></i> Attached File</a></div>`
+                ) : ''}
                     <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">${new Date(item.createdAt).toLocaleDateString()}</p>
                 </div>
             `).join('');
@@ -351,6 +356,29 @@ export function toggleContentModal() {
     document.getElementById('content-modal').classList.toggle('hidden');
 }
 
+export function toggleSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    modal.classList.toggle('hidden');
+    if (!modal.classList.contains('hidden')) {
+        // Load settings
+        document.getElementById('hf-repo').value = localStorage.getItem('hf_repo') || "";
+        document.getElementById('hf-token').value = localStorage.getItem('hf_token') || "";
+    }
+}
+
+export function saveSettings() {
+    const repo = document.getElementById('hf-repo').value;
+    const token = document.getElementById('hf-token').value;
+    if (repo && token) {
+        localStorage.setItem('hf_repo', repo);
+        localStorage.setItem('hf_token', token);
+        showToast("Settings Saved", "success");
+        toggleSettingsModal();
+    } else {
+        showToast("Please fill both fields", "error");
+    }
+}
+
 export function openContentModal(type) {
     document.getElementById('content-type').value = type;
     document.getElementById('content-edit-id').value = "";
@@ -364,13 +392,36 @@ export function openContentModal(type) {
     const body = document.getElementById('content-body');
     const link = document.getElementById('content-link');
 
+    const fileSection = document.getElementById('file-upload-section');
+    const fileInput = document.getElementById('content-file');
+    const uploadProgress = document.getElementById('upload-progress');
+
     body.classList.remove('hidden');
     link.classList.add('hidden');
+    fileSection.classList.add('hidden');
+    fileInput.value = ""; // Reset file
+    uploadProgress.classList.add('hidden');
 
-    if (type === 'announcement') { titleEl.innerText = "New Announcement"; labelEl.innerText = "Message"; }
-    else if (type === 'video') { titleEl.innerText = "Add Video"; labelEl.innerText = "YouTube/Drive URL"; body.classList.add('hidden'); link.classList.remove('hidden'); }
+    if (type === 'announcement') {
+        titleEl.innerText = "New Announcement";
+        labelEl.innerText = "Message";
+        fileSection.classList.remove('hidden');
+    }
+    else if (type === 'video') {
+        titleEl.innerText = "Add Video";
+        labelEl.innerText = "YouTube/Drive URL (Or Upload File)";
+        body.classList.add('hidden');
+        link.classList.remove('hidden');
+        fileSection.classList.remove('hidden');
+    }
     else if (type === 'folder') { titleEl.innerText = "Create New Folder"; labelEl.innerText = "Description (Optional)"; body.classList.remove('hidden'); link.classList.add('hidden'); }
-    else if (type === 'summary') { titleEl.innerText = "Add Summary"; labelEl.innerText = "PDF/Drive URL"; body.classList.add('hidden'); link.classList.remove('hidden'); }
+    else if (type === 'summary') {
+        titleEl.innerText = "Add Summary";
+        labelEl.innerText = "PDF/Drive URL (Or Upload File)";
+        body.classList.add('hidden');
+        link.classList.remove('hidden');
+        fileSection.classList.remove('hidden');
+    }
     else if (type === 'homework') { titleEl.innerText = "Assign Homework"; labelEl.innerText = "Instructions"; link.classList.remove('hidden'); link.placeholder = "Optional Link (e.g. Worksheet URL)"; }
 
     toggleContentModal();
@@ -393,16 +444,46 @@ export async function handleSaveContent() {
     const title = document.getElementById('content-title').value;
     const body = document.getElementById('content-body').value;
     const url = document.getElementById('content-link').value;
+    const fileInput = document.getElementById('content-file');
     const order = parseInt(document.getElementById('content-order').value) || 1;
 
+    let finalUrl = url;
+
+    // Handle File Upload
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const repoId = localStorage.getItem('hf_repo');
+        const token = localStorage.getItem('hf_token');
+
+        if (!repoId || !token) return showToast("Please configure Settings first!", "error");
+
+        const progressDiv = document.getElementById('upload-progress');
+        const progressBar = progressDiv.querySelector('.bg-brand-primary');
+        const progressText = progressDiv.querySelector('p');
+
+        progressDiv.classList.remove('hidden');
+        progressText.innerText = `Uploading ${file.name}...`;
+        progressBar.style.width = '30%'; // Fake progress for start
+
+        try {
+            finalUrl = await uploadToHuggingFace(file, repoId, token, "course_uploads/");
+            progressBar.style.width = '100%';
+            progressText.innerText = "Upload Complete!";
+        } catch (err) {
+            console.error(err);
+            progressDiv.classList.add('hidden');
+            return showToast("Upload Failed: " + err.message, "error");
+        }
+    }
+
     if (!title) return showToast("Title required", "error");
-    if ((type === 'video' || type === 'summary') && !url) return showToast("URL required", "error");
+    if ((type === 'video' || type === 'summary') && !finalUrl) return showToast("URL or File required", "error");
 
     try {
         const data = {
             courseId: state.activeCourseContext.id,
             subcourseCode: state.activeCourseContext.subcode || null,
-            type, title, content: body, url, order,
+            type, title, content: body, url: finalUrl, order,
             parentId: state.currentFolderId,
             authorId: state.currentUserData.uid
         };
