@@ -1,0 +1,12 @@
+{
+    "operations": [
+        {
+            "operation": "add_or_update",
+            "path": "test_curl.txt",
+            "content": "SGVsbG8gRnJvbSBDdXJs",
+            "encoding": "base64"
+        }
+    ],
+    "commit_message": "Test Curl Upload",
+    "summary": "Test Upload"
+}

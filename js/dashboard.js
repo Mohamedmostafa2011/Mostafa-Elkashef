@@ -508,7 +508,7 @@ export async function handleSaveContent() {
     // Handle File Upload (Batch)
     if (selectedFilesMap.size > 0) {
         // Hardcoded credentials
-        const repoId = "Mostafaelkashef/Kashef-files";
+        const repoId = "Mostafaelkashef/Kashef-files-v2";
         const token = "hf_" + "ipqvtKHcbiiyEdIJucbNaRtpBhjWGRRggW";
 
         const progressDiv = document.getElementById('upload-progress');
