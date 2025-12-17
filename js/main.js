@@ -5,7 +5,7 @@ import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
 import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js";
 import { renderStudentDashboard } from "./student.js";
-import { renderTab, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent } from "./dashboard.js";
+import { renderTab, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings } from "./dashboard.js";
 import { showToast } from "./utils.js";
 
 // --- EXPOSE GLOBAL FUNCTIONS (Bridge for HTML onclick) ---
@@ -28,6 +28,8 @@ window.openContentModal = openContentModal;
 window.openEditContentModal = openEditContentModal;
 window.handleSaveContent = handleSaveContent;
 window.deleteContent = deleteContent;
+window.toggleSettingsModal = toggleSettingsModal;
+window.saveSettings = saveSettings;
 window.deleteStudentAccount = deleteStudentAccount;
 
 // Sidebar Toggles

@@ -474,7 +474,11 @@ export async function handleSaveContent() {
         const repoId = localStorage.getItem('hf_repo');
         const token = localStorage.getItem('hf_token');
 
-        if (!repoId || !token) return showToast("Please configure Settings first!", "error");
+        if (!repoId || !token) {
+            showToast("Please configure Settings first!", "error");
+            window.toggleSettingsModal(); // Auto open settings
+            return;
+        }
 
         const progressDiv = document.getElementById('upload-progress');
         const progressBar = progressDiv.querySelector('.bg-brand-primary');
