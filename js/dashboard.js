@@ -6,16 +6,63 @@ import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage.js";
 
 // Initialize File Input Listener
+// Initialize File Input Listener & State
+let selectedFilesMap = new Map(); // Key: fileName, Value: { file, customName }
+
 const fileInput = document.getElementById('content-file');
 if (fileInput) {
     fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        const label = document.getElementById('file-label');
-        if (label && file) {
-            label.innerText = `Selected: ${file.name}`;
-            label.className = "text-xs font-bold text-brand-primary";
+        const files = Array.from(e.target.files);
+        const container = document.getElementById('file-list-container');
+        const fileLabel = document.getElementById('file-label');
+
+        if (files.length > 0) {
+            files.forEach(f => {
+                if (!selectedFilesMap.has(f.name)) {
+                    selectedFilesMap.set(f.name, { file: f, customName: f.name.split('.')[0] });
+                }
+            });
+            renderFileList();
+            container.classList.remove('hidden');
+            if (fileLabel) fileLabel.innerText = `${selectedFilesMap.size} file(s) selected`;
         }
     });
+}
+
+function renderFileList() {
+    const container = document.getElementById('file-list-container');
+    container.innerHTML = '';
+
+    selectedFilesMap.forEach((val, key) => {
+        const div = document.createElement('div');
+        div.className = "flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs";
+        div.innerHTML = `
+            <i class="fas fa-file text-slate-400"></i>
+            <input type="text" value="${val.customName}" oninput="window.updateFileName('${key}', this.value)" 
+                class="flex-1 bg-transparent border-b border-transparent focus:border-brand-primary outline-none text-slate-700 font-bold" 
+                placeholder="Rename file...">
+            <button onclick="window.removeFile('${key}')" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.updateFileName = (key, name) => {
+    if (selectedFilesMap.has(key)) {
+        selectedFilesMap.get(key).customName = name;
+    }
+}
+
+window.removeFile = (key) => {
+    selectedFilesMap.delete(key);
+    renderFileList();
+    const fileLabel = document.getElementById('file-label');
+    if (selectedFilesMap.size === 0) {
+        document.getElementById('file-list-container').classList.add('hidden');
+        if (fileLabel) fileLabel.innerText = "Click or drag files here";
+    } else {
+        if (fileLabel) fileLabel.innerText = `${selectedFilesMap.size} file(s) selected`;
+    }
 }
 
 
@@ -401,9 +448,12 @@ export function openContentModal(type) {
     fileInput.value = ""; // Reset file
     const fileLabel = document.getElementById('file-label');
     if (fileLabel) {
-        fileLabel.innerText = "Click or drag file here";
+        fileLabel.innerText = "Click or drag files here";
         fileLabel.className = "text-xs font-bold";
     }
+    document.getElementById('file-list-container').classList.add('hidden');
+    document.getElementById('file-list-container').innerHTML = "";
+    selectedFilesMap.clear(); // Clear state
     uploadProgress.classList.add('hidden');
 
     if (type === 'announcement') {
@@ -487,6 +537,7 @@ export async function handleSaveContent() {
             courseId: state.activeCourseContext.id,
             subcourseCode: state.activeCourseContext.subcode || null,
             type, title, content: body, url: finalUrl, order,
+            attachments: attachments, // New Field
             parentId: state.currentFolderId,
             authorId: state.currentUserData.uid
         };

@@ -305,16 +305,22 @@
 
                 <!-- File Upload Area -->
                 <div id="file-upload-section" class="hidden">
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Upload File
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Upload Files
                         (Unlimited)</label>
                     <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 transition cursor-pointer relative"
                         id="drop-zone">
-                        <input type="file" id="content-file" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <input type="file" id="content-file" class="absolute inset-0 opacity-0 cursor-pointer" multiple>
                         <div class="text-slate-400">
                             <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
-                            <p class="text-xs font-bold" id="file-label">Click or drag file here</p>
+                            <p class="text-xs font-bold" id="file-label">Click or drag files here</p>
                         </div>
                     </div>
+
+                    <!-- File List for Renaming -->
+                    <div id="file-list-container" class="mt-4 space-y-2 hidden">
+                        <!-- Dynamic file items will appear here -->
+                    </div>
+
                     <div id="upload-progress" class="hidden mt-2">
                         <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div class="h-full bg-brand-primary w-0 transition-all duration-300" style="width: 0%">

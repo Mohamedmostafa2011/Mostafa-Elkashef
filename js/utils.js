@@ -51,29 +51,63 @@ export function generateVideoCardHtml(item, isAdmin) {
             </div>` : ''}
         </div>`;
     } else {
-        let embedUrl = item.url || "";
-        let isDirectFile = false;
-        if (embedUrl.includes('drive.google.com')) {
-            embedUrl = embedUrl.split('?')[0];
-            embedUrl = embedUrl.replace(/\/view$/, '/preview').replace(/\/edit$/, '/preview');
-        } else if (embedUrl.includes('watch?v=')) {
-            embedUrl = embedUrl.replace('watch?v=', 'embed/');
-        } else if (embedUrl.includes('youtu.be/')) {
-            embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+        // Check for multiple attachments
+        let contentDisplay = '';
+        const attachments = item.attachments || [];
+
+        // If attachments exist, render them all (videos stacked)
+        if (attachments.length > 0) {
+            contentDisplay = `<div class="aspect-video bg-slate-900 flex flex-col items-center justify-center overflow-y-auto no-scrollbar snap-y snap-mandatory h-full w-full">`;
+            attachments.forEach(att => {
+                if (att.type === 'video') {
+                    contentDisplay += `
+                        <div class="snap-center w-full min-h-full flex items-center justify-center relative bg-black">
+                            <video src="${att.url}" class="w-full h-full max-h-full block object-contain" controls playsinline controlsList="nodownload"></video>
+                            <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-md">${att.name}</span>
+                        </div>`;
+                } else {
+                    contentDisplay += `
+                        <div class="snap-center w-full min-h-full flex items-center justify-center bg-slate-800 p-4">
+                             <a href="${att.url}" target="_blank" class="flex flex-col items-center gap-2 text-slate-300 hover:text-white transition group/link">
+                                <i class="fas fa-file-download text-4xl mb-2 text-brand-primary group-hover/link:scale-110 transition"></i>
+                                <span class="font-bold text-sm">${att.name}</span>
+                             </a>
+                        </div>`;
+                }
+            });
+            contentDisplay += `</div>`;
+
+            // Add "Multiple Items" badge if > 1
+            if (attachments.length > 1) {
+                dragHandle += `<span class="absolute top-2 right-2 z-20 bg-brand-primary text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">${attachments.length} Items</span>`;
+            }
         } else {
-            // Assume direct file (Hugging Face or other direct link)
-            isDirectFile = true;
+            // Legacy/Single URL Fallback
+            let embedUrl = item.url || "";
+            let isDirectFile = false;
+            if (embedUrl.includes('drive.google.com')) {
+                embedUrl = embedUrl.split('?')[0];
+                embedUrl = embedUrl.replace(/\/view$/, '/preview').replace(/\/edit$/, '/preview');
+            } else if (embedUrl.includes('watch?v=')) {
+                embedUrl = embedUrl.replace('watch?v=', 'embed/');
+            } else if (embedUrl.includes('youtu.be/')) {
+                embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+            } else {
+                isDirectFile = true;
+            }
+
+            contentDisplay = `<div class="aspect-video bg-slate-900 flex items-center justify-center">
+                ${isDirectFile
+                    ? `<video src="${embedUrl}" class="w-full h-full block" controls playsinline controlsList="nodownload"></video>`
+                    : `<iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`
+                }
+            </div>`;
         }
 
         return `
         <div data-id="${item.id}" class="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-lg transition group relative">
             ${dragHandle}
-            <div class="aspect-video bg-slate-900 flex items-center justify-center">
-                ${isDirectFile
-                ? `<video src="${embedUrl}" class="w-full h-full block" controls playsinline controlsList="nodownload"></video>`
-                : `<iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`
-            }
-            </div>
+            ${contentDisplay}
             <div class="p-4">
                 <div class="flex justify-between items-start gap-2">
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm flex-1">${item.title}</h4>
