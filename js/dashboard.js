@@ -3,7 +3,7 @@ import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, a
 import { state } from "./state.js";
 import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils.js";
 import { renderAdminHome } from "./admin.js";
-import { uploadToHuggingFace } from "./hf_storage_v2.js";
+import { uploadToHuggingFace } from "./hf_storage_v3.js";
 
 // Initialize File Input Listener
 // Initialize File Input Listener & State
