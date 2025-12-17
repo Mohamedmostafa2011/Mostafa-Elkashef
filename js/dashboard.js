@@ -371,26 +371,11 @@ export function toggleContentModal() {
 }
 
 export function toggleSettingsModal() {
-    const modal = document.getElementById('settings-modal');
-    modal.classList.toggle('hidden');
-    if (!modal.classList.contains('hidden')) {
-        // Load settings
-        document.getElementById('hf-repo').value = localStorage.getItem('hf_repo') || "";
-        document.getElementById('hf-token').value = localStorage.getItem('hf_token') || "";
-    }
+    console.log("Settings modal removed.");
 }
 
 export function saveSettings() {
-    const repo = document.getElementById('hf-repo').value;
-    const token = document.getElementById('hf-token').value;
-    if (repo && token) {
-        localStorage.setItem('hf_repo', repo);
-        localStorage.setItem('hf_token', token);
-        showToast("Settings Saved", "success");
-        toggleSettingsModal();
-    } else {
-        showToast("Please fill both fields", "error");
-    }
+    console.log("Settings save removed.");
 }
 
 export function openContentModal(type) {
@@ -471,14 +456,9 @@ export async function handleSaveContent() {
     // Handle File Upload
     if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        const repoId = localStorage.getItem('hf_repo');
-        const token = localStorage.getItem('hf_token');
-
-        if (!repoId || !token) {
-            showToast("Please configure Settings first!", "error");
-            window.toggleSettingsModal(); // Auto open settings
-            return;
-        }
+        // Hardcoded credentials (Hidden from settings UI)
+        const repoId = "Mostafaelkashef/Kashef-files";
+        const token = "hf_" + "ipqvtKHcbiiyEdIJucbNaRtpBhjWGRRggW";
 
         const progressDiv = document.getElementById('upload-progress');
         const progressBar = progressDiv.querySelector('.bg-brand-primary');
