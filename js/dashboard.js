@@ -550,50 +550,33 @@ export async function handleSaveContent() {
         }
     }
 
-    const progressDiv = document.getElementById('upload-progress');
-    const progressBar = progressDiv.querySelector('.bg-brand-primary');
-    const progressText = progressDiv.querySelector('p');
 
-    progressDiv.classList.remove('hidden');
-    progressText.innerText = `Uploading ${file.name}...`;
-    progressBar.style.width = '30%'; // Fake progress for start
+
+    if (!title) return showToast("Title required", "error");
+    if ((type === 'video' || type === 'summary') && !finalUrl) return showToast("URL or File required", "error");
 
     try {
-        finalUrl = await uploadToHuggingFace(file, repoId, token, "course_uploads/");
-        progressBar.style.width = '100%';
-        progressText.innerText = "Upload Complete!";
-    } catch (err) {
-        console.error(err);
-        progressDiv.classList.add('hidden');
-        return showToast("Upload Failed: " + err.message, "error");
-    }
-}
+        const data = {
+            courseId: state.activeCourseContext.id,
+            subcourseCode: state.activeCourseContext.subcode || null,
+            type, title, content: body, url: finalUrl, order,
+            attachments: attachments, // New Field
+            parentId: state.currentFolderId,
+            authorId: state.currentUserData.uid
+        };
 
-if (!title) return showToast("Title required", "error");
-if ((type === 'video' || type === 'summary') && !finalUrl) return showToast("URL or File required", "error");
-
-try {
-    const data = {
-        courseId: state.activeCourseContext.id,
-        subcourseCode: state.activeCourseContext.subcode || null,
-        type, title, content: body, url: finalUrl, order,
-        attachments: attachments, // New Field
-        parentId: state.currentFolderId,
-        authorId: state.currentUserData.uid
-    };
-
-    if (editId) {
-        await updateDoc(doc(db, "course_content", editId), { title, content: body, url, order });
-        showToast("Updated successfully");
-    } else {
-        data.createdAt = new Date().toISOString();
-        await addDoc(collection(db, "course_content"), data);
-        showToast("Created successfully");
-    }
-    toggleContentModal();
-    const tabMap = { 'announcement': 'home', 'video': 'videos', 'folder': 'videos', 'summary': 'summaries', 'homework': 'hw' };
-    renderTab(tabMap[type]);
-} catch (e) { console.error(e); showToast("Error saving content", "error"); }
+        if (editId) {
+            await updateDoc(doc(db, "course_content", editId), { title, content: body, url, order });
+            showToast("Updated successfully");
+        } else {
+            data.createdAt = new Date().toISOString();
+            await addDoc(collection(db, "course_content"), data);
+            showToast("Created successfully");
+        }
+        toggleContentModal();
+        const tabMap = { 'announcement': 'home', 'video': 'videos', 'folder': 'videos', 'summary': 'summaries', 'homework': 'hw' };
+        renderTab(tabMap[type]);
+    } catch (e) { console.error(e); showToast("Error saving content", "error"); }
 }
 
 export async function deleteContent(id, currentTab) {
