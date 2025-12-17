@@ -2,7 +2,7 @@ import { db } from "./config.js";
 import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, deleteDoc, where, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { showToast, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils.js";
-import { openCourseDashboard, renderTab } from "./dashboard.js";
+import { openCourseDashboard, renderTab } from "./dashboard_v2.js";
 
 export async function renderAdminHome() {
     withViewTransition(async () => {
