@@ -5,6 +5,20 @@ import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml
 import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage.js";
 
+// Initialize File Input Listener
+const fileInput = document.getElementById('content-file');
+if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const label = document.getElementById('file-label');
+        if (label && file) {
+            label.innerText = `Selected: ${file.name}`;
+            label.className = "text-xs font-bold text-brand-primary";
+        }
+    });
+}
+
+
 // --- DASHBOARD: NAVIGATION ---
 export function openCourseDashboard(id, title, subcode) {
     state.activeCourseContext = { id, title, subcode };
@@ -400,6 +414,11 @@ export function openContentModal(type) {
     link.classList.add('hidden');
     fileSection.classList.add('hidden');
     fileInput.value = ""; // Reset file
+    const fileLabel = document.getElementById('file-label');
+    if (fileLabel) {
+        fileLabel.innerText = "Click or drag file here";
+        fileLabel.className = "text-xs font-bold";
+    }
     uploadProgress.classList.add('hidden');
 
     if (type === 'announcement') {
