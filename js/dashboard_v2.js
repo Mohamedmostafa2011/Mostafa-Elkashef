@@ -433,20 +433,71 @@ export function closeFileViewer() {
     content.innerHTML = ''; // Clear content to stop videos/iframes
 }
 
+// Helper to render PDF using PDF.js
+async function renderPdfInViewer(url, container) {
+    container.innerHTML = '<div class="text-white text-xl font-bold animate-pulse">Loading Document...</div>';
+
+    try {
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+
+        container.innerHTML = ''; // Clear loading
+
+        const wrapper = document.createElement('div');
+        wrapper.className = "w-full h-full overflow-y-auto flex flex-col items-center gap-4 p-4";
+        container.appendChild(wrapper);
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const scale = 3.0; // High quality scale (equivalent to 300 DPI usually)
+            const viewport = page.getViewport({ scale });
+
+            const canvas = document.createElement('canvas');
+            canvas.className = "shadow-lg rounded-lg bg-white max-w-full";
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Make it responsive via CSS
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+
+            wrapper.appendChild(canvas);
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            await page.render(renderContext).promise;
+        }
+    } catch (error) {
+        console.error("PDF Render Error:", error);
+        container.innerHTML = `
+            <div class="text-center text-white">
+                <div class="text-4xl mb-4 text-red-400"><i class="fas fa-exclamation-circle"></i></div>
+                <h3 class="text-2xl font-bold mb-2">Error Loading Document</h3>
+                <p class="text-slate-400 mb-6">${error.message}</p>
+                <a href="${url}" target="_blank" class="bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-600 transition">
+                    Try External Download
+                </a>
+            </div>`;
+    }
+}
+
 export function openFileViewer(url, type = 'file') {
     const modal = document.getElementById('file-viewer-modal');
     const content = document.getElementById('file-viewer-content');
-    const downloadBtn = document.getElementById('file-viewer-download');
 
     if (!modal || !content) return;
 
-    content.innerHTML = '<div class="text-white text-xl font-bold animate-pulse">Loading...</div>';
+    // Reset content
+    content.innerHTML = '';
     modal.classList.remove('hidden');
-    downloadBtn.href = url;
 
     // Determine content type based on URL extension if generic 'file' type is passed
     let fileType = type;
     const lowerUrl = url.toLowerCase();
+
     if (lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/)) fileType = 'image';
     else if (lowerUrl.match(/\.(mp4|webm|ogg)$/)) fileType = 'video';
     else if (lowerUrl.match(/\.(pdf)$/)) fileType = 'pdf';
@@ -455,50 +506,45 @@ export function openFileViewer(url, type = 'file') {
     if (url.includes('youtube.com') || url.includes('youtu.be')) fileType = 'youtube';
 
     // Render Content
-    let html = '';
     if (fileType === 'image') {
-        html = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Preview">`;
-    } else if (fileType === 'video') {
-        html = `<video controls autoplay class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
+        content.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Preview">`;
+    }
+    else if (fileType === 'video') {
+        content.innerHTML = `<video controls autoplay class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
                     <source src="${url}">
                     Your browser does not support the video tag.
                 </video>`;
-    } else if (fileType === 'youtube') {
+    }
+    else if (fileType === 'youtube') {
         let videoId = "";
         if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
         else if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1];
 
         if (videoId) {
-            html = `<iframe class="w-full h-full max-w-4xl aspect-video rounded-xl shadow-2xl" 
+            content.innerHTML = `<iframe class="w-full h-full max-w-4xl aspect-video rounded-xl shadow-2xl" 
                         src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
                         frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
                     </iframe>`;
         } else {
-            html = `<div class="text-white text-center">
+            content.innerHTML = `<div class="text-white text-center">
                         <i class="fas fa-exclamation-triangle text-4xl mb-4 text-yellow-400"></i>
                         <p>Invalid YouTube URL</p>
                     </div>`;
         }
-    } else if (fileType === 'pdf') {
-        // Use Google Docs Viewer for generic compat, or direct iframe if browser supports it. 
-        // Direct iframe is better for modern browsers, but Google Docs viewer is safer for variety of file types.
-        // Let's try direct iframe first for PDF, it's native.
-        html = `<iframe src="${url}" class="w-full h-full rounded-xl border-none bg-white"></iframe>`;
-    } else {
-        // Fallback
-        html = `<div class="text-center text-white">
+    }
+    else if (fileType === 'pdf') {
+        renderPdfInViewer(url, content);
+    }
+    else {
+        // Fallback for unknown types
+        content.innerHTML = `<div class="text-center text-white">
                     <div class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6 text-slate-400">
-                        <i class="fas fa-file-alt"></i>
+                        <i class="fas fa-eye-slash"></i>
                     </div>
                     <h3 class="text-2xl font-bold mb-2">Preview Not Available</h3>
                     <p class="text-slate-400 mb-6">This file type cannot be previewed directly.</p>
-                    <a href="${url}" target="_blank" class="bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-600 transition">
-                        Download File
-                    </a>
                 </div>`;
     }
-
-    content.innerHTML = html;
 }
 
 export function openContentModal(type) {
