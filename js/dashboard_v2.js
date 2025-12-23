@@ -252,11 +252,7 @@ async function _renderTabInternal(tabName) {
                         ${items.length ? posts : `<div class="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">No announcements yet.</div>`}
                     </div>
                     <div class="space-y-6">
-                        <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden">
-                            <h3 class="font-bold text-lg relative z-10">Math Hub</h3>
-                            <p class="text-blue-100 text-sm relative z-10 mt-1">Check videos for latest recordings.</p>
-                            <div class="absolute -right-4 -bottom-4 text-7xl opacity-20"><i class="fas fa-brain"></i></div>
-                        </div>
+                        <!-- Space for future widgets or side info -->
                     </div>
 
                 </div>`;
