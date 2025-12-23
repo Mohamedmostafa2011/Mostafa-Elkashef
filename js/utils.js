@@ -99,43 +99,75 @@ export function generateVideoCardHtml(item, isAdmin) {
     } else {
         const attachments = item.attachments || [];
         let videoUrl = item.url || "";
-        let isUploaded = false;
 
         if (attachments.length > 0) {
-            const hero = attachments.find(a => a.type === 'video') || attachments[0];
+            const hero = attachments.find(a => a.type === 'video' || a.url.match(/\.(mp4|webm|ogg)$/i)) || attachments[0];
             videoUrl = hero.url;
-            isUploaded = true;
         }
 
         const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
         const isDrive = videoUrl.includes('drive.google.com');
 
-        // Professional Video Card with Play Launcher
-        contentDisplay = `
-        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${videoUrl}', 'video')">
-            <!-- Stylized Thumbnail Placeholder / Background -->
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-brand-dark opacity-50"></div>
+        // Extract YouTube/Video Thumbnail
+        let thumbnailHtml = `<div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand-dark opacity-30"></div>`;
+        if (isYouTube) {
+            let videoId = "";
+            if (videoUrl.includes('watch?v=')) videoId = videoUrl.split('v=')[1]?.split('&')[0];
+            else if (videoUrl.includes('youtu.be/')) videoId = videoUrl.split('youtu.be/')[1]?.split('?')[0];
+            else if (videoUrl.includes('embed/')) videoId = videoUrl.split('embed/')[1]?.split('?')[0];
+
+            if (videoId) {
+                thumbnailHtml = `
+                <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" class="absolute inset-0 w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/10"></div>`;
+            }
+        } else if (isDrive) {
+            // High-quality placeholder for Google Drive
+            thumbnailHtml = `
+            <div class="absolute inset-0 bg-gradient-to-br from-brand-primary to-brand-dark flex items-center justify-center overflow-hidden">
+                <div class="absolute inset-0 opacity-20 scale-150 rotate-12"><i class="fas fa-play-circle text-[200px] text-white"></i></div>
+                <div class="relative z-10 flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-xl border border-white/30">
+                        <i class="fab fa-google-drive"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute inset-0 bg-black/10"></div>`;
+        } else if (videoUrl) {
+            // First-frame preview trick for MP4/WebM/Self-hosted
+            thumbnailHtml = `
+            <video src="${videoUrl}#t=0.1" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline></video>
+            <div class="absolute inset-0 bg-black/10"></div>`;
+        }
+
+        const safeUrl = videoUrl.replace(/'/g, "\\'");
+        let contentDisplay = `
+        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${safeUrl}', 'video')">
+            <!-- Dynamic Thumbnail -->
+            ${thumbnailHtml}
+
+            <!-- Center Play Button Overlay -->
             <div class="absolute inset-0 flex items-center justify-center">
-                <div class="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-2xl group-hover/video:scale-110 group-hover/video:bg-brand-primary group-hover/video:border-brand-primary transition-all duration-300 shadow-2xl">
+                <div class="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-2xl group-hover/video:scale-110 group-hover/video:bg-brand-primary group-hover/video:border-brand-primary transition-all duration-300 shadow-2xl z-10">
                     <i class="fas fa-play ml-1"></i>
                 </div>
             </div>
             
-            <!-- Metadata Badges -->
-            <div class="absolute top-3 left-3 flex gap-2">
-                <span class="bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-md border border-white/10 uppercase tracking-widest leading-none flex items-center gap-1">
+            <!-- Metadata Badge -->
+            <div class="absolute top-3 left-3 z-20">
+                <span class="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-md border border-white/10 uppercase tracking-widest leading-none flex items-center gap-1">
                     <i class="fas ${isYouTube ? 'fa-youtube text-red-500' : 'fa-play-circle text-brand-primary'} text-[10px]"></i>
-                    ${isYouTube ? 'YouTube' : isDrive ? 'Google Drive' : 'Uploaded'}
+                    ${isYouTube ? 'YouTube' : 'Video'}
                 </span>
             </div>
 
             ${attachments.length > 1 ? `
-            <div class="absolute top-3 right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-white/20 uppercase tracking-widest leading-none">
+            <div class="absolute top-3 right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-white/20 uppercase tracking-widest leading-none z-20">
                 +${attachments.length - 1} Files
             </div>` : ''}
 
-            <!-- Bottom Title Overlay (Subtle) -->
-            <div class="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover/video:opacity-100 transition-opacity">
+            <!-- Bottom Title Overlay (Visible on Hover) -->
+            <div class="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
                 <p class="text-white text-[11px] font-bold uppercase tracking-wider line-clamp-1">${item.title}</p>
             </div>
         </div>`;
@@ -159,7 +191,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Additional Files</p>
                     <div class="flex flex-wrap gap-2">
                         ${attachments.slice(1).map(att => `
-                            <button onclick="window.openFileViewer('${att.url}', 'file')" class="text-[10px] font-bold bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:border-brand-primary transition-colors truncate max-w-[120px]">
+                            <button onclick="window.openFileViewer('${att.url.replace(/'/g, "\\'")}', 'file')" class="text-[10px] font-bold bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:border-brand-primary transition-colors truncate max-w-[120px]">
                                 <i class="fas ${att.type === 'video' ? 'fa-play-circle text-brand-primary' : 'fa-file'} mr-1"></i> ${att.name}
                             </button>
                         `).join('')}

@@ -223,26 +223,7 @@ async function _renderTabInternal(tabName) {
                 </div>
             `).join('');
 
-            let upNextHtml = '';
-            if (!isAdmin) {
-                const vQ = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id), where("type", "==", "video"));
-                const vSnap = await getDocs(vQ);
-                if (!vSnap.empty) {
-                    upNextHtml = `
-                    <div class="bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl p-6 text-white shadow-xl mb-8 relative overflow-hidden group cursor-pointer" onclick="window.renderTab('videos')">
-                         <div class="absolute right-0 bottom-0 opacity-10 text-[150px] leading-none -mb-10 -mr-10 group-hover:scale-110 transition duration-500"><i class="fas fa-play-circle"></i></div>
-                         <div class="relative z-10">
-                            <span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-white/30">Up Next</span>
-                            <h3 class="text-2xl font-display font-bold mt-4 mb-2">Continue Learning</h3>
-                            <p class="text-blue-100 max-w-md">Pick up where you left off. Watch the latest recordings in the video library.</p>
-                            <button class="mt-6 bg-white text-brand-primary px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition shadow-lg">Go to Videos <i class="fas fa-arrow-right ml-2"></i></button>
-                         </div>
-                    </div>`;
-                }
-            }
-
             contentHtml = `
-                ${upNextHtml}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
                     <div class="md:col-span-2">
                         <div class="flex justify-between items-center mb-4 px-1">
@@ -381,17 +362,33 @@ async function _renderTabInternal(tabName) {
 
 export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromHistory = false) {
     if (!fromHistory) {
-        history.pushState({ tab: 'videos', folderId: id }, "", `#videos${id ? '/' + id : ''}`);
+        history.pushState({ tab: 'videos', folderId: id, folderTitle: title }, "", `#videos${id ? '/' + id : ''}`);
     }
-    withViewTransition(() => {
-        if (id === null) { state.currentFolderId = null; state.breadcrumbs = []; }
-        else if (breadcrumbIndex !== null) { state.currentFolderId = id; state.breadcrumbs = state.breadcrumbs.slice(0, breadcrumbIndex + 1); }
-        else { state.currentFolderId = id; state.breadcrumbs.push({ id, title }); }
 
-        // We use _renderTabInternal directly or just ensure verify we are on video tab?
-        // renderTab handles the UI switch, so usually we just want to ensure video tab is active and re-render content
-        // BUT calling renderTab would push state again.
-        // Let's just manually trigger re-render of current tab (videos)
+    withViewTransition(() => {
+        if (id === null) {
+            state.currentFolderId = null;
+            state.breadcrumbs = [];
+        } else {
+            state.currentFolderId = id;
+            // If explicit index is provided (from breadcrumb click)
+            if (breadcrumbIndex !== null) {
+                state.breadcrumbs = state.breadcrumbs.slice(0, breadcrumbIndex + 1);
+            } else {
+                // Check if already in breadcrumbs to prevent duplicates on back/forward
+                const existingIndex = state.breadcrumbs.findIndex(b => b.id === id);
+                if (existingIndex !== -1) {
+                    state.breadcrumbs = state.breadcrumbs.slice(0, existingIndex + 1);
+                    // Update title if it was null before but we have it now
+                    if (title && !state.breadcrumbs[existingIndex].title) {
+                        state.breadcrumbs[existingIndex].title = title;
+                    }
+                } else if (title) {
+                    // Only push if we have a valid title
+                    state.breadcrumbs.push({ id, title });
+                }
+            }
+        }
         _renderTabInternal('videos');
     });
 }
@@ -547,6 +544,7 @@ export function openFileViewer(url, type = 'file') {
 
     // Handle YouTube/Video links if not direct file
     if (url.includes('youtube.com') || url.includes('youtu.be')) fileType = 'youtube';
+    else if (url.includes('drive.google.com')) fileType = 'drive';
 
     // Render Content
     if (fileType === 'image') {
@@ -574,6 +572,19 @@ export function openFileViewer(url, type = 'file') {
                         <p>Invalid YouTube URL</p>
                     </div>`;
         }
+    }
+    else if (fileType === 'drive') {
+        let embedUrl = url;
+        // Transform standard view/edit links to preview links for embedding
+        if (url.includes('/view')) embedUrl = url.replace('/view', '/preview');
+        else if (url.includes('/edit')) embedUrl = url.replace('/edit', '/preview');
+        else if (!url.includes('/preview')) {
+            // Fallback for raw IDs or other formats
+            const match = url.match(/\/d\/([^/]+)/);
+            if (match) embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+        }
+
+        content.innerHTML = `<iframe src="${embedUrl}" class="w-full h-full max-w-4xl aspect-video rounded-xl shadow-2xl bg-black" frameborder="0" allow="autoplay"></iframe>`;
     }
     else if (fileType === 'pdf') {
         renderPdfInViewer(url, content);

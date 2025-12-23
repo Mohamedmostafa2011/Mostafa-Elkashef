@@ -114,7 +114,7 @@ window.addEventListener('popstate', (event) => {
 
     if (event.state) {
         if (event.state.folderId !== undefined) {
-            navigateToFolder(event.state.folderId, null, null, true);
+            navigateToFolder(event.state.folderId, null, event.state.folderTitle, true);
         } else if (event.state.tab) {
             renderTab(event.state.tab, true);
         }
