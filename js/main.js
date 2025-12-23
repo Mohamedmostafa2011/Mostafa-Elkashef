@@ -5,7 +5,7 @@ import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
 import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js";
 import { renderStudentDashboard } from "./student.js";
-import { renderTab, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer } from "./dashboard_v2.js";
+import { renderTab, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal } from "./dashboard_v2.js";
 import { showToast } from "./utils.js";
 
 // --- EXPOSE GLOBAL FUNCTIONS (Bridge for HTML onclick) ---
@@ -32,6 +32,7 @@ window.toggleSettingsModal = toggleSettingsModal;
 window.saveSettings = saveSettings;
 window.openFileViewer = openFileViewer;
 window.closeFileViewer = closeFileViewer;
+window._closeViewerInternal = _closeViewerInternal;
 window.deleteStudentAccount = deleteStudentAccount;
 
 // Sidebar Toggles
@@ -107,20 +108,28 @@ onAuthStateChanged(auth, async (user) => {
 // --- HISTORY HANDLING ---
 window.onpopstate = (event) => {
     if (event.state) {
-        if (event.state.folderId !== undefined) {
-            // It's a folder navigation
-            // We need to find the title for breadcrumbs if possible, but for 'back' often we just need to go to ID
-            // The simple logic in navigateToFolder might need 'title' if it's a new push, but for 'back' 
-            // we might rely on existing state OR redundant calls.
-            // Simplification: logic to restore folder state is complex without full breadcrumb history.
-            // For now, let's at least switch tabs.
-            // If folderId is present, we try to open it.
-            navigateToFolder(event.state.folderId, null, null, true);
-        } else if (event.state.tab) {
-            renderTab(event.state.tab, true);
+        if (event.state.modal === 'fileViewer') {
+            // Should usually not happen as popstate means we LEFT this state, but if we are navigating FORWARD to it:
+            // Do nothing or re-open? Usually we care about leaving.
+        } else {
+            // If we popped a state, check if we need to close the viewer
+            // Actually, if we hit Back, we enter a NEW state (or empty). 
+            // We just need to ensure the Modal is closed if the new state DOES NOT have modal='fileViewer'
+            _closeViewerInternal(); // Close it blindly on any back nav not explicitly handling it? 
+            // No, wait. 
+            // If we are in File Viewer, we have state { modal: 'fileViewer' }.
+            // If we press back, event.state becomes the PREVIOUS state (likely tab: 'home').
+            // So if event.state.modal is NOT fileViewer, we should close it.
+
+            if (event.state.folderId !== undefined) {
+                navigateToFolder(event.state.folderId, null, null, true);
+            } else if (event.state.tab) {
+                renderTab(event.state.tab, true);
+            }
         }
     } else {
         // Default
+        _closeViewerInternal();
         renderTab('home', true);
     }
 };

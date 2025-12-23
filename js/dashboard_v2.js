@@ -428,9 +428,23 @@ export function saveSettings() {
 // --- FILE VIEWER FUNCTIONS ---
 export function closeFileViewer() {
     const modal = document.getElementById('file-viewer-modal');
+    // Check if we are closing via back button (history already popped) or manual click
+    // If manual click and we have history state, go back
+    if (history.state && history.state.modal === 'fileViewer') {
+        history.back(); // This will trigger popstate which closes the modal
+        return;
+    }
+
+    // Direct close (fallback)
+    _closeViewerInternal();
+}
+
+// Internal close logic separated for popstate reuse
+export function _closeViewerInternal() {
+    const modal = document.getElementById('file-viewer-modal');
     const content = document.getElementById('file-viewer-content');
     modal.classList.add('hidden');
-    content.innerHTML = ''; // Clear content to stop videos/iframes
+    content.innerHTML = '';
 }
 
 // Helper to render PDF using PDF.js
@@ -489,6 +503,9 @@ export function openFileViewer(url, type = 'file') {
     const content = document.getElementById('file-viewer-content');
 
     if (!modal || !content) return;
+
+    // Push State for Back Button Support
+    history.pushState({ modal: 'fileViewer' }, "", "#view-file");
 
     // Reset content
     content.innerHTML = '';
