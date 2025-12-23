@@ -1,7 +1,7 @@
 import { db } from "./config.js";
 import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils.js";
+import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils.js";
 import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage_v4.js";
 
@@ -202,28 +202,32 @@ async function _renderTabInternal(tabName) {
                     <div class="flex justify-between items-start mb-2">
                         <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg">${item.title}</h4>
                         ${isAdmin ? `
-                        <div class="flex gap-2">
-                            <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-400 hover:text-brand-primary text-xs"><i class="fas fa-pencil-alt"></i></button>
-                            <button onclick="window.deleteContent('${item.id}', 'home')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>
+                        <div class="flex gap-2 text-slate-400">
+                            <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="hover:text-brand-primary transition-colors"><i class="fas fa-pencil-alt text-sm"></i></button>
+                            <button onclick="window.deleteContent('${item.id}', 'home')" class="hover:text-red-500 transition-colors"><i class="fas fa-trash text-sm"></i></button>
                         </div>` : ''}
                     </div>
                     <p class="text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">${item.content}</p>
-                    ${item.url ? (item.url.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null ?
-                    `<img src="${item.url}" onclick="window.openFileViewer('${item.url}', 'image')" class="mt-4 rounded-xl max-h-96 w-full object-cover border border-slate-100 dark:border-slate-700 cursor-pointer hover:opacity-95 transition" loading="lazy">` :
-                    `<div class="mt-4"><button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold text-brand-primary hover:bg-slate-100 transition"><i class="fas fa-file-alt"></i> View Attachment</button></div>`
-                ) : ''}
-                    <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">${new Date(item.createdAt).toLocaleDateString()}</p>
+                    
+                    ${generateAttachmentsHtml(item.attachments || [], item.title)}
+                    
+                    ${(!item.attachments || item.attachments.length === 0) && item.url ? `
+                        <div class="mt-4">
+                            <button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-2 rounded-lg text-sm font-bold text-brand-primary hover:bg-slate-100 transition border border-slate-100 dark:border-slate-600">
+                                <i class="fas fa-link"></i> View Attachment
+                            </button>
+                        </div>
+                    ` : ''}
+                    
+                    <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase tracking-widest opacity-70">${new Date(item.createdAt).toLocaleDateString()}</p>
                 </div>
             `).join('');
 
-            // Personalize "Up Next" Logic (Mock: Pick first video or latest announcement)
             let upNextHtml = '';
             if (!isAdmin) {
-                // Fetch first video to show as "Continue Learning"
                 const vQ = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id), where("type", "==", "video"));
-                const vSnap = await getDocs(vQ); // Note: In real app, optimize this query or cache it
+                const vSnap = await getDocs(vQ);
                 if (!vSnap.empty) {
-                    const nextVid = vSnap.docs[0].data();
                     upNextHtml = `
                     <div class="bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl p-6 text-white shadow-xl mb-8 relative overflow-hidden group cursor-pointer" onclick="window.renderTab('videos')">
                          <div class="absolute right-0 bottom-0 opacity-10 text-[150px] leading-none -mb-10 -mr-10 group-hover:scale-110 transition duration-500"><i class="fas fa-play-circle"></i></div>
@@ -241,26 +245,41 @@ async function _renderTabInternal(tabName) {
                 ${upNextHtml}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
                     <div class="md:col-span-2">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex justify-between items-center mb-4 px-1">
                             <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100">Announcements</h3>
                             ${isAdmin ? `<button onclick="window.openContentModal('announcement')" class="text-sm text-brand-primary font-bold hover:underline">+ New Post</button>` : ''}
                         </div>
-                        ${items.length ? posts : `<div class="p-8 text-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">No announcements yet.</div>`}
+                        ${items.length ? posts : `<div class="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">No announcements yet.</div>`}
                     </div>
-                    <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden h-fit">
-                        <h3 class="font-bold text-lg relative z-10">Math Info</h3>
-                        <p class="text-blue-100 text-sm relative z-10 mt-1">Check videos for latest recordings.</p>
-                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-20"><i class="fas fa-clock"></i></div>
+                    <div class="space-y-6">
+                        <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden">
+                            <h3 class="font-bold text-lg relative z-10">Math Hub</h3>
+                            <p class="text-blue-100 text-sm relative z-10 mt-1">Check videos for latest recordings.</p>
+                            <div class="absolute -right-4 -bottom-4 text-7xl opacity-20"><i class="fas fa-brain"></i></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
+                             <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Quick Shortcuts</h4>
+                             <div class="grid grid-cols-2 gap-3">
+                                <button onclick="window.renderTab('videos')" class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl flex flex-col items-center gap-2 hover:bg-slate-100 transition border border-slate-100 dark:border-slate-600">
+                                    <i class="fas fa-play-circle text-brand-primary text-xl"></i>
+                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">Videos</span>
+                                </button>
+                                <button onclick="window.renderTab('hw')" class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl flex flex-col items-center gap-2 hover:bg-slate-100 transition border border-slate-100 dark:border-slate-600">
+                                    <i class="fas fa-pencil-alt text-amber-500 text-xl"></i>
+                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">Homework</span>
+                                </button>
+                             </div>
+                        </div>
                     </div>
                 </div>`;
         } else if (tabName === 'videos') {
             let breadcrumbHtml = '';
             if (state.currentFolderId) {
-                breadcrumbHtml = `<div class="flex items-center gap-2 mb-2 text-sm font-bold text-slate-500 fade-in">
-                    <span onclick="window.navigateToFolder(null)" class="cursor-pointer hover:text-brand-primary">Home</span>
+                breadcrumbHtml = `<div class="flex items-center gap-2 mb-4 text-sm font-bold text-slate-500 fade-in px-1">
+                    <span onclick="window.navigateToFolder(null)" class="cursor-pointer hover:text-brand-primary transition">Home</span>
                     ${state.breadcrumbs.map((b, i) => `
-                        <i class="fas fa-chevron-right text-[10px]"></i>
-                        <span onclick="window.navigateToFolder('${b.id}', ${i})" class="cursor-pointer hover:text-brand-primary">${b.title}</span>
+                        <i class="fas fa-chevron-right text-[10px] opacity-30"></i>
+                        <span onclick="window.navigateToFolder('${b.id}', ${i})" class="cursor-pointer hover:text-brand-primary transition font-display">${b.title}</span>
                     `).join('')}
                 </div>`;
             }
@@ -269,78 +288,99 @@ async function _renderTabInternal(tabName) {
 
             contentHtml = `
                 ${breadcrumbHtml}
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 fade-in gap-4">
-                    <h2 class="text-xl font-bold text-slate-800">${state.currentFolderId ? 'Folder Contents' : 'Videos & Folders'}</h2>
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 fade-in gap-4">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">${state.currentFolderId ? 'Folder Contents' : 'Library'}</h2>
                     
                     <div class="flex gap-2 w-full md:w-auto items-center">
                         <div class="relative flex-1 md:w-64">
-                            <i class="fas fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
-                            <input type="text" oninput="window.filterVideoItems(this.value)" placeholder="Search here..." class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:border-brand-primary outline-none focus:ring-2 focus:ring-brand-light transition">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" oninput="window.filterVideoItems(this.value)" placeholder="Search library..." class="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:border-brand-primary outline-none focus:ring-4 focus:ring-brand-primary/5 transition">
                         </div>
                     
                         ${isAdmin ? `
                         <div class="flex gap-2 shrink-0">
-                            <button onclick="window.openContentModal('folder')" class="bg-yellow-100 text-yellow-700 px-3 py-2 rounded-lg font-bold text-sm hover:bg-yellow-200 transition"><i class="fas fa-folder-plus"></i></button>
-                            <button onclick="window.openContentModal('video')" class="bg-brand-primary text-white px-3 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-upload"></i></button>
+                            <button onclick="window.openContentModal('folder')" class="h-10 w-10 flex items-center justify-center bg-yellow-50 text-yellow-600 rounded-xl font-bold hover:bg-yellow-100 transition" title="New Folder"><i class="fas fa-folder-plus"></i></button>
+                            <button onclick="window.openContentModal('video')" class="h-10 w-10 flex items-center justify-center bg-brand-primary text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-600 transition" title="Add Video"><i class="fas fa-plus"></i></button>
                         </div>` : ''}
                     </div>
                 </div>
-                ${items.length ? `<div id="video-sortable-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${grid}</div>` :
-                    `<div class="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-sm"><div class="inline-block p-4 bg-slate-50 rounded-full text-slate-300 mb-3"><i class="fas fa-folder-open text-2xl"></i></div><p class="text-slate-500">This folder is empty.</p></div>`}
+                ${items.length ? `<div id="video-sortable-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in px-0.5">${grid}</div>` :
+                    `<div class="bg-white dark:bg-slate-800 rounded-[2rem] p-16 text-center border border-slate-100 dark:border-slate-700 shadow-sm"><div class="inline-block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-full text-slate-300 mb-4 animate-bounce"><i class="fas fa-folder-open text-3xl"></i></div><p class="text-slate-500 font-bold">This folder is empty.</p></div>`}
             `;
         } else if (tabName === 'summaries') {
             const list = items.map(item => `
-                <div class="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:border-brand-primary/30 transition group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center text-lg"><i class="fas fa-file-pdf"></i></div>
-                        <div>
-                            <h4 class="font-bold text-slate-800">${item.title}</h4>
-                            <p class="text-xs text-slate-500">${new Date(item.createdAt).toLocaleDateString()}</p>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-500 flex items-center justify-center text-xl shadow-sm"><i class="fas fa-file-pdf"></i></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">${item.title}</h4>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">${new Date(item.createdAt).toLocaleDateString()}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="window.openFileViewer('${item.url}', 'pdf')" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100">View</button>
                         ${isAdmin ? `
-                        <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-primary rounded-lg border border-slate-100"><i class="fas fa-pencil-alt"></i></button>
-                        <button onclick="window.deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
+                        <div class="flex gap-2">
+                             <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary p-1"><i class="fas fa-pencil-alt text-xs"></i></button>
+                             <button onclick="window.deleteContent('${item.id}', 'summaries')" class="text-slate-300 hover:text-red-500 p-1"><i class="fas fa-trash text-xs"></i></button>
+                        </div>` : ''}
                     </div>
+                    
+                    ${generateAttachmentsHtml(item.attachments || [], item.title)}
+                    
+                    ${(!item.attachments || item.attachments.length === 0) && item.url ? `
+                        <button onclick="window.openFileViewer('${item.url}', 'file')" class="mt-2 text-brand-primary text-sm font-bold hover:underline flex items-center gap-2">
+                            <i class="fas fa-external-link-alt text-[10px]"></i> View Linked PDF
+                        </button>
+                    ` : ''}
                 </div>
             `).join('');
+
             contentHtml = `
-                <div class="flex justify-between items-center mb-6 fade-in">
-                    <h2 class="text-xl font-bold text-slate-800">Class Summaries</h2>
-                    ${isAdmin ? `<button onclick="window.openContentModal('summary')" class="bg-brand-dark text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition"><i class="fas fa-file-upload mr-2"></i> Add PDF Link</button>` : ''}
+                <div class="flex justify-between items-center mb-8 fade-in">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Summaries</h2>
+                    ${isAdmin ? `<button onclick="window.openContentModal('summary')" class="bg-brand-dark text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition shadow-lg"><i class="fas fa-plus mr-2"></i> Add Summary</button>` : ''}
                 </div>
-                <div class="space-y-3 fade-in">
-                    ${items.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No summaries found.</div>`}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
+                    ${items.length ? list : `<div class="col-span-full p-16 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 font-bold">No summaries available.</div>`}
                 </div>`;
         } else if (tabName === 'hw') {
             const list = items.map(item => `
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition relative">
-                    ${isAdmin ? `
-                    <div class="absolute top-4 right-4 flex gap-2">
-                        <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary"><i class="fas fa-pencil-alt"></i></button>
-                        <button onclick="window.deleteContent('${item.id}', 'hw')" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                    </div>` : ''}
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fas fa-pencil-alt"></i></div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-slate-800 text-lg mb-1">${item.title}</h4>
-                            <p class="text-slate-600 text-sm mb-3 whitespace-pre-wrap">${item.content}</p>
-                            ${item.url ? `<button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center text-brand-primary font-bold text-sm hover:underline"><i class="fas fa-link mr-1"></i> Attached Resource</button>` : ''}
-                        </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm relative group">
+                    <div class="flex justify-between items-start mb-4">
+                         <div class="flex items-center gap-4">
+                             <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center text-xl shadow-sm"><i class="fas fa-tasks"></i></div>
+                             <div>
+                                 <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">${item.title}</h4>
+                                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">${new Date(item.createdAt).toLocaleDateString()}</p>
+                             </div>
+                         </div>
+                         ${isAdmin ? `
+                         <div class="flex gap-2">
+                             <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary p-1"><i class="fas fa-pencil-alt text-xs"></i></button>
+                             <button onclick="window.deleteContent('${item.id}', 'hw')" class="text-slate-300 hover:text-red-500 p-1"><i class="fas fa-trash text-xs"></i></button>
+                         </div>` : ''}
                     </div>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed whitespace-pre-wrap mb-4 font-medium">${item.content}</p>
+                    
+                    ${generateAttachmentsHtml(item.attachments || [], item.title)}
+
+                    ${(!item.attachments || item.attachments.length === 0) && item.url ? `
+                    <button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center gap-2 text-brand-primary font-bold text-sm hover:underline">
+                        <i class="fas fa-link"></i> View Attachment
+                    </button>` : ''}
                 </div>
             `).join('');
+
             contentHtml = `
-                <div class="flex justify-between items-center mb-6 fade-in">
-                    <h2 class="text-xl font-bold text-slate-800">Homework & Tasks</h2>
-                    ${isAdmin ? `<button onclick="window.openContentModal('homework')" class="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-600 transition"><i class="fas fa-plus mr-2"></i> New Task</button>` : ''}
+                <div class="flex justify-between items-center mb-8 fade-in">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Homework</h2>
+                    ${isAdmin ? `<button onclick="window.openContentModal('homework')" class="bg-brand-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-plus mr-2"></i> New Task</button>` : ''}
                 </div>
-                <div class="space-y-4 fade-in">
-                    ${items.length ? list : `<div class="text-center p-8 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">No active homework.</div>`}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                    ${items.length ? list : `<div class="col-span-full p-16 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 font-bold">Great job! No homework found.</div>`}
                 </div>`;
         }
+
         container.innerHTML = header + contentHtml;
 
         // --- INITIALIZE SORTABLE ---
@@ -350,9 +390,10 @@ async function _renderTabInternal(tabName) {
 
     } catch (e) {
         console.error(e);
-        container.innerHTML = header + `<div class="p-8 text-center text-red-500">Error loading content. <br> <span class="text-xs text-slate-400">${e.message}</span></div>`;
+        container.innerHTML = (header || '') + `<div class="p-8 text-center text-red-500">Error loading content. <br> <span class="text-xs text-slate-400">${e.message}</span></div>`;
     }
 }
+
 
 export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromHistory = false) {
     if (!fromHistory) {
