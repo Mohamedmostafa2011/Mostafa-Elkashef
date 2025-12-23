@@ -352,6 +352,32 @@
 
     <!-- SETTINGS MODAL REMOVED -->
 
+    <!-- ================= FILE VIEWER MODAL ================= -->
+    <div id="file-viewer-modal"
+        class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/95 backdrop-blur-md hidden fade-in p-4">
+        <div class="relative w-full max-w-6xl h-[90vh] flex flex-col justify-center items-center">
+            <!-- Close Button -->
+            <button onclick="window.closeFileViewer()"
+                class="absolute -top-12 right-0 text-white hover:text-red-400 transition text-2xl z-50 p-2">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Content Container -->
+            <div id="file-viewer-content"
+                class="w-full h-full flex items-center justify-center overflow-hidden rounded-xl shadow-2xl bg-black/50 relative">
+                <!-- Dynamic Content -->
+            </div>
+
+            <!-- Download Button -->
+            <div class="absolute -bottom-16 flex gap-4 z-50">
+                <a id="file-viewer-download" href="#" target="_blank"
+                    class="text-white hover:text-brand-primary font-bold text-sm bg-slate-800/80 px-6 py-3 rounded-full border border-slate-700/50 backdrop-blur hover:bg-slate-800 transition shadow-lg">
+                    <i class="fas fa-download mr-2"></i> Download / Open Original
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 

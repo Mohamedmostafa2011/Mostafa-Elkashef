@@ -208,9 +208,9 @@ async function _renderTabInternal(tabName) {
                         </div>` : ''}
                     </div>
                     <p class="text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">${item.content}</p>
-                    ${item.url ? (item.url.match(/\.(jpeg|jpg|gif|png)$/) != null ?
-                    `<img src="${item.url}" class="mt-4 rounded-xl max-h-96 w-full object-cover border border-slate-100 dark:border-slate-700" loading="lazy">` :
-                    `<div class="mt-4"><a href="${item.url}" target="_blank" class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold text-brand-primary hover:bg-slate-100 transition"><i class="fas fa-download"></i> Attached File</a></div>`
+                    ${item.url ? (item.url.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null ?
+                    `<img src="${item.url}" onclick="window.openFileViewer('${item.url}', 'image')" class="mt-4 rounded-xl max-h-96 w-full object-cover border border-slate-100 dark:border-slate-700 cursor-pointer hover:opacity-95 transition" loading="lazy">` :
+                    `<div class="mt-4"><button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold text-brand-primary hover:bg-slate-100 transition"><i class="fas fa-file-alt"></i> View Attachment</button></div>`
                 ) : ''}
                     <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">${new Date(item.createdAt).toLocaleDateString()}</p>
                 </div>
@@ -299,7 +299,7 @@ async function _renderTabInternal(tabName) {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <a href="${item.url}" target="_blank" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100">View</a>
+                        <button onclick="window.openFileViewer('${item.url}', 'pdf')" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-100">View</button>
                         ${isAdmin ? `
                         <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-brand-primary rounded-lg border border-slate-100"><i class="fas fa-pencil-alt"></i></button>
                         <button onclick="window.deleteContent('${item.id}', 'summaries')" class="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>` : ''}
@@ -327,7 +327,7 @@ async function _renderTabInternal(tabName) {
                         <div class="flex-1">
                             <h4 class="font-bold text-slate-800 text-lg mb-1">${item.title}</h4>
                             <p class="text-slate-600 text-sm mb-3 whitespace-pre-wrap">${item.content}</p>
-                            ${item.url ? `<a href="${item.url}" target="_blank" class="inline-flex items-center text-brand-primary font-bold text-sm hover:underline"><i class="fas fa-link mr-1"></i> Attached Resource</a>` : ''}
+                            ${item.url ? `<button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center text-brand-primary font-bold text-sm hover:underline"><i class="fas fa-link mr-1"></i> Attached Resource</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -423,6 +423,82 @@ export function toggleSettingsModal() {
 
 export function saveSettings() {
     console.log("Settings save removed.");
+}
+
+// --- FILE VIEWER FUNCTIONS ---
+export function closeFileViewer() {
+    const modal = document.getElementById('file-viewer-modal');
+    const content = document.getElementById('file-viewer-content');
+    modal.classList.add('hidden');
+    content.innerHTML = ''; // Clear content to stop videos/iframes
+}
+
+export function openFileViewer(url, type = 'file') {
+    const modal = document.getElementById('file-viewer-modal');
+    const content = document.getElementById('file-viewer-content');
+    const downloadBtn = document.getElementById('file-viewer-download');
+
+    if (!modal || !content) return;
+
+    content.innerHTML = '<div class="text-white text-xl font-bold animate-pulse">Loading...</div>';
+    modal.classList.remove('hidden');
+    downloadBtn.href = url;
+
+    // Determine content type based on URL extension if generic 'file' type is passed
+    let fileType = type;
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/)) fileType = 'image';
+    else if (lowerUrl.match(/\.(mp4|webm|ogg)$/)) fileType = 'video';
+    else if (lowerUrl.match(/\.(pdf)$/)) fileType = 'pdf';
+
+    // Handle YouTube/Video links if not direct file
+    if (url.includes('youtube.com') || url.includes('youtu.be')) fileType = 'youtube';
+
+    // Render Content
+    let html = '';
+    if (fileType === 'image') {
+        html = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Preview">`;
+    } else if (fileType === 'video') {
+        html = `<video controls autoplay class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
+                    <source src="${url}">
+                    Your browser does not support the video tag.
+                </video>`;
+    } else if (fileType === 'youtube') {
+        let videoId = "";
+        if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+        else if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1];
+
+        if (videoId) {
+            html = `<iframe class="w-full h-full max-w-4xl aspect-video rounded-xl shadow-2xl" 
+                        src="https://www.youtube.com/embed/${videoId}?autoplay=1" 
+                        frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+                    </iframe>`;
+        } else {
+            html = `<div class="text-white text-center">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4 text-yellow-400"></i>
+                        <p>Invalid YouTube URL</p>
+                    </div>`;
+        }
+    } else if (fileType === 'pdf') {
+        // Use Google Docs Viewer for generic compat, or direct iframe if browser supports it. 
+        // Direct iframe is better for modern browsers, but Google Docs viewer is safer for variety of file types.
+        // Let's try direct iframe first for PDF, it's native.
+        html = `<iframe src="${url}" class="w-full h-full rounded-xl border-none bg-white"></iframe>`;
+    } else {
+        // Fallback
+        html = `<div class="text-center text-white">
+                    <div class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6 text-slate-400">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2">Preview Not Available</h3>
+                    <p class="text-slate-400 mb-6">This file type cannot be previewed directly.</p>
+                    <a href="${url}" target="_blank" class="bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-600 transition">
+                        Download File
+                    </a>
+                </div>`;
+    }
+
+    content.innerHTML = html;
 }
 
 export function openContentModal(type) {

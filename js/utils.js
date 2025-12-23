@@ -68,10 +68,10 @@ export function generateVideoCardHtml(item, isAdmin) {
                 } else {
                     contentDisplay += `
                         <div class="snap-center w-full min-h-full flex items-center justify-center bg-slate-800 p-4">
-                             <a href="${att.url}" target="_blank" class="flex flex-col items-center gap-2 text-slate-300 hover:text-white transition group/link">
-                                <i class="fas fa-file-download text-4xl mb-2 text-brand-primary group-hover/link:scale-110 transition"></i>
+                             <button onclick="window.openFileViewer('${att.url}', 'file')" class="flex flex-col items-center gap-2 text-slate-300 hover:text-white transition group/link">
+                                <i class="fas fa-file-alt text-4xl mb-2 text-brand-primary group-hover/link:scale-110 transition"></i>
                                 <span class="font-bold text-sm">${att.name}</span>
-                             </a>
+                             </button>
                         </div>`;
                 }
             });
