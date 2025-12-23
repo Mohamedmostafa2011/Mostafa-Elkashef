@@ -89,6 +89,14 @@ onAuthStateChanged(auth, async (user) => {
                 document.getElementById('app-screen').classList.remove('hidden');
                 document.getElementById('header-user').innerText = state.currentUserData.name;
                 document.getElementById('header-role').innerText = state.currentUserData.role === 'admin' ? 'Instructor' : 'Student';
+
+                // Role-based UI States
+                if (state.currentUserData.role === 'admin') {
+                    document.body.classList.add('is-instructor');
+                } else {
+                    document.body.classList.remove('is-instructor');
+                }
+
                 if (state.currentUserData.role === 'admin') renderAdminHome();
                 else renderStudentDashboard();
             }

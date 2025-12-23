@@ -49,6 +49,15 @@
             }
         }
     </script>
+    <style>
+        .profile-clickable {
+            cursor: pointer;
+        }
+
+        body.is-instructor .profile-clickable {
+            cursor: default !important;
+        }
+    </style>
 </head>
 
 <body class="bg-surface text-slate-800 h-screen overflow-hidden selection:bg-brand-primary selection:text-white">
@@ -220,15 +229,19 @@
                         Mostafa Elkashef</h2>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 p-0.5">
+                <div id="header-profile-area" onclick="window.handleHeaderProfileClick()"
+                    class="flex items-center gap-3 group/profile profile-clickable">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 p-0.5 group-hover/profile:scale-105 transition-transform shadow-lg shadow-blue-500/10">
                         <div
                             class="w-full h-full bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-brand-primary font-bold text-lg">
-                            <i class="fas fa-user"></i>
+                            <i class="fas fa-user text-sm"></i>
                         </div>
                     </div>
                     <div class="text-left">
-                        <p id="header-user" class="text-sm font-bold text-slate-900 dark:text-white">Loading...</p>
+                        <p id="header-user"
+                            class="text-sm font-bold text-slate-800 dark:text-white group-hover/profile:text-brand-primary transition-colors">
+                            Loading...</p>
                         <p id="header-role"
                             class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                             ...</p>

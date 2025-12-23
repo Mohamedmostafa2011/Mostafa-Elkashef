@@ -128,6 +128,85 @@ async function _renderTabInternal(tabName) {
     let contentHtml = '';
 
     try {
+        // --- PROFILE TAB ---
+        if (tabName === 'profile') {
+            const u = state.currentUserData;
+            const joinedDate = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A';
+            const initials = u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+            contentHtml = `
+                <div class="max-w-2xl mx-auto py-8 fade-in">
+                    <!-- Profile Card -->
+                    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden relative">
+                        <!-- Header Background -->
+                        <div class="h-32 bg-gradient-to-r from-blue-600 to-purple-600 relative overflow-hidden">
+                            <div class="absolute inset-0 opacity-20" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+                            <div class="absolute -bottom-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                        </div>
+
+                        <div class="px-8 pb-10 relative">
+                            <!-- Avatar -->
+                            <div class="flex justify-center -mt-16 mb-6">
+                                <div class="w-32 h-32 rounded-full bg-white dark:bg-slate-800 p-1.5 shadow-2xl relative">
+                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black font-display shadow-inner">
+                                        ${initials}
+                                    </div>
+                                    <div class="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-green-500 border-4 border-white dark:border-slate-800 shadow-lg" title="Online"></div>
+                                </div>
+                            </div>
+
+                            <!-- Identity -->
+                            <div class="text-center mb-10">
+                                <h2 class="text-3xl font-black text-slate-900 dark:text-white font-display tracking-tight">${u.name}</h2>
+                                <div class="flex items-center justify-center gap-2 mt-2">
+                                    <span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-brand-primary text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100 dark:border-blue-800/50">
+                                        ${u.role === 'admin' ? 'Instructor' : 'Student'}
+                                    </span>
+                                    <span class="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest">• Joined ${joinedDate}</span>
+                                </div>
+                            </div>
+
+                            <!-- Details Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+                                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700/50 group hover:border-brand-primary/30 transition-colors">
+                                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <i class="fas fa-phone-alt text-brand-primary"></i> Contact
+                                    </p>
+                                    <p class="font-bold text-slate-700 dark:text-slate-200">${u.phone}</p>
+                                </div>
+                                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700/50 group hover:border-brand-primary/30 transition-colors">
+                                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <i class="fas fa-graduation-cap text-purple-500"></i> Course Enrollment
+                                    </p>
+                                    <p class="font-bold text-slate-700 dark:text-slate-200 line-clamp-1">${u.courseTitle || state.activeCourseContext.title || 'N/A'}</p>
+                                </div>
+                                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700/50 group hover:border-brand-primary/30 transition-colors sm:col-span-2">
+                                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <i class="fas fa-users text-amber-500"></i> Group / Sub-course
+                                    </p>
+                                    <p class="font-bold text-slate-700 dark:text-slate-200">${u.subcourseCode || 'Global'}</p>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-slate-50 dark:border-slate-800">
+                                <button onclick="window.renderTab('home')" class="flex-1 px-6 py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition shadow-xl active:scale-[0.98]">
+                                    Return to Home
+                                </button>
+                                <button onclick="document.getElementById('logout-btn').click()" class="flex-1 px-6 py-4 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-bold text-sm hover:bg-red-100 transition active:scale-[0.98]">
+                                    Log Out Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-center mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em]">Mostafa Elkashef • Learning Platform</p>
+                </div>`;
+
+            container.innerHTML = contentHtml;
+            return;
+        }
+
         // --- STUDENTS TAB ---
         if (tabName === 'students' && isAdmin) {
             const qUsers = query(collection(db, "users"), where("courseId", "==", state.activeCourseContext.id));
@@ -774,3 +853,24 @@ export async function deleteContent(id, currentTab) {
     if (!confirm("Delete this item? If it's a folder, contents might be hidden.")) return;
     try { await deleteDoc(doc(db, "course_content", id)); showToast("Deleted"); renderTab(currentTab); } catch (e) { showToast("Error deleting", "error"); }
 }
+
+// Global Assignments for HTML Event Handlers
+window.renderTab = renderTab;
+window.handleHeaderProfileClick = () => {
+    if (state.currentUserData?.role !== 'admin') {
+        window.renderTab('profile');
+    }
+};
+window.openCourseDashboard = openCourseDashboard;
+window.navigateToFolder = navigateToFolder;
+window.filterVideoItems = filterVideoItems;
+window.toggleContentModal = toggleContentModal;
+window.openContentModal = openContentModal;
+window.openEditContentModal = openEditContentModal;
+window.handleSaveContent = handleSaveContent;
+window.deleteContent = deleteContent;
+window.toggleSettingsModal = toggleSettingsModal;
+window.saveSettings = saveSettings;
+window.openFileViewer = openFileViewer;
+window.closeFileViewer = closeFileViewer;
+window._closeViewerInternal = _closeViewerInternal;
