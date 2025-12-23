@@ -463,7 +463,7 @@ async function renderPdfInViewer(url, container) {
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
-            const scale = 3.0; // High quality scale (equivalent to 300 DPI usually)
+            const scale = 2.0; // Optimized for mobile/web (approx 200 DPI)
             const viewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
@@ -487,13 +487,14 @@ async function renderPdfInViewer(url, container) {
     } catch (error) {
         console.error("PDF Render Error:", error);
         container.innerHTML = `
-            <div class="text-center text-white">
-                <div class="text-4xl mb-4 text-red-400"><i class="fas fa-exclamation-circle"></i></div>
-                <h3 class="text-2xl font-bold mb-2">Error Loading Document</h3>
-                <p class="text-slate-400 mb-6">${error.message}</p>
-                <a href="${url}" target="_blank" class="bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-600 transition">
-                    Try External Download
-                </a>
+            <div class="text-center text-white p-4">
+                <div class="text-4xl mb-4 text-red-500"><i class="fas fa-exclamation-circle"></i></div>
+                <h3 class="text-xl font-bold mb-2">Error Loading Document</h3>
+                <p class="text-slate-400 mb-6 text-sm">${error.message}</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="window.closeFileViewer()" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold">Cancel</button>
+                    <a href="${url}" target="_blank" class="bg-brand-primary text-white px-6 py-3 rounded-xl font-bold">Open as Direct Link</a>
+                </div>
             </div>`;
     }
 }
@@ -504,8 +505,8 @@ export function openFileViewer(url, type = 'file') {
 
     if (!modal || !content) return;
 
-    // Push State for Back Button Support
-    history.pushState({ modal: 'fileViewer' }, "", "#view-file");
+    // Push State for Back Button Support - Ensure it's unique
+    history.pushState({ modal: 'fileViewer', timestamp: Date.now() }, "", "#view-file");
 
     // Reset content
     content.innerHTML = '';

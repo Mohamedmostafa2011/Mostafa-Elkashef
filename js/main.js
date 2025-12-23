@@ -106,30 +106,20 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // --- HISTORY HANDLING ---
-window.onpopstate = (event) => {
-    if (event.state) {
-        if (event.state.modal === 'fileViewer') {
-            // Should usually not happen as popstate means we LEFT this state, but if we are navigating FORWARD to it:
-            // Do nothing or re-open? Usually we care about leaving.
-        } else {
-            // If we popped a state, check if we need to close the viewer
-            // Actually, if we hit Back, we enter a NEW state (or empty). 
-            // We just need to ensure the Modal is closed if the new state DOES NOT have modal='fileViewer'
-            _closeViewerInternal(); // Close it blindly on any back nav not explicitly handling it? 
-            // No, wait. 
-            // If we are in File Viewer, we have state { modal: 'fileViewer' }.
-            // If we press back, event.state becomes the PREVIOUS state (likely tab: 'home').
-            // So if event.state.modal is NOT fileViewer, we should close it.
+window.addEventListener('popstate', (event) => {
+    // If state is null or modal is not fileViewer, we ensure viewer is closed
+    if (!event.state || event.state.modal !== 'fileViewer') {
+        _closeViewerInternal();
+    }
 
-            if (event.state.folderId !== undefined) {
-                navigateToFolder(event.state.folderId, null, null, true);
-            } else if (event.state.tab) {
-                renderTab(event.state.tab, true);
-            }
+    if (event.state) {
+        if (event.state.folderId !== undefined) {
+            navigateToFolder(event.state.folderId, null, null, true);
+        } else if (event.state.tab) {
+            renderTab(event.state.tab, true);
         }
     } else {
-        // Default
-        _closeViewerInternal();
+        // Fallback to home
         renderTab('home', true);
     }
-};
+});
