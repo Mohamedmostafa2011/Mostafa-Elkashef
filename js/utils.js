@@ -98,47 +98,50 @@ export function generateVideoCardHtml(item, isAdmin) {
         </div>`;
     } else {
         const attachments = item.attachments || [];
-        let contentDisplay = '';
+        let videoUrl = item.url || "";
+        let isUploaded = false;
 
         if (attachments.length > 0) {
-            // Hero Video (first one) or multiple
-            const hero = attachments[0];
-            if (hero.type === 'video') {
-                contentDisplay = `
-                <div class="aspect-video bg-black relative group/hero">
-                    <video src="${hero.url}" class="w-full h-full block object-contain" controls playsinline controlsList="nodownload"></video>
-                    ${attachments.length > 1 ? `<span class="absolute top-2 right-2 bg-brand-primary text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md z-20">+${attachments.length - 1} More Items</span>` : ''}
-                </div>`;
-            } else {
-                contentDisplay = `
-                <div class="aspect-video bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                    <i class="fas fa-file-alt text-4xl"></i>
-                </div>`;
-            }
-        } else {
-            // Legacy / Single URL
-            let embedUrl = item.url || "";
-            let isVideoFile = embedUrl.match(/\.(mp4|webm|ogg)$/i);
-
-            if (embedUrl.includes('drive.google.com')) {
-                embedUrl = embedUrl.split('?')[0].replace(/\/view$/, '/preview').replace(/\/edit$/, '/preview');
-            } else if (embedUrl.includes('watch?v=')) {
-                embedUrl = embedUrl.replace('watch?v=', 'embed/');
-            } else if (embedUrl.includes('youtu.be/')) {
-                embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
-            }
-
-            contentDisplay = `
-            <div class="aspect-video bg-black flex items-center justify-center">
-                ${isVideoFile
-                    ? `<video src="${embedUrl}" class="w-full h-full block" controls playsinline controlsList="nodownload"></video>`
-                    : `<iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`
-                }
-            </div>`;
+            const hero = attachments.find(a => a.type === 'video') || attachments[0];
+            videoUrl = hero.url;
+            isUploaded = true;
         }
 
+        const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+        const isDrive = videoUrl.includes('drive.google.com');
+
+        // Professional Video Card with Play Launcher
+        contentDisplay = `
+        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${videoUrl}', 'video')">
+            <!-- Stylized Thumbnail Placeholder / Background -->
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-brand-dark opacity-50"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-2xl group-hover/video:scale-110 group-hover/video:bg-brand-primary group-hover/video:border-brand-primary transition-all duration-300 shadow-2xl">
+                    <i class="fas fa-play ml-1"></i>
+                </div>
+            </div>
+            
+            <!-- Metadata Badges -->
+            <div class="absolute top-3 left-3 flex gap-2">
+                <span class="bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-md border border-white/10 uppercase tracking-widest leading-none flex items-center gap-1">
+                    <i class="fas ${isYouTube ? 'fa-youtube text-red-500' : 'fa-play-circle text-brand-primary'} text-[10px]"></i>
+                    ${isYouTube ? 'YouTube' : isDrive ? 'Google Drive' : 'Uploaded'}
+                </span>
+            </div>
+
+            ${attachments.length > 1 ? `
+            <div class="absolute top-3 right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-white/20 uppercase tracking-widest leading-none">
+                +${attachments.length - 1} Files
+            </div>` : ''}
+
+            <!-- Bottom Title Overlay (Subtle) -->
+            <div class="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover/video:opacity-100 transition-opacity">
+                <p class="text-white text-[11px] font-bold uppercase tracking-wider line-clamp-1">${item.title}</p>
+            </div>
+        </div>`;
+
         return `
-        <div data-id="${item.id}" class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition group relative">
+        <div data-id="${item.id}" class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative">
             ${dragHandle}
             ${contentDisplay}
             <div class="p-5">
