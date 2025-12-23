@@ -257,20 +257,8 @@ async function _renderTabInternal(tabName) {
                             <p class="text-blue-100 text-sm relative z-10 mt-1">Check videos for latest recordings.</p>
                             <div class="absolute -right-4 -bottom-4 text-7xl opacity-20"><i class="fas fa-brain"></i></div>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
-                             <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Quick Shortcuts</h4>
-                             <div class="grid grid-cols-2 gap-3">
-                                <button onclick="window.renderTab('videos')" class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl flex flex-col items-center gap-2 hover:bg-slate-100 transition border border-slate-100 dark:border-slate-600">
-                                    <i class="fas fa-play-circle text-brand-primary text-xl"></i>
-                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">Videos</span>
-                                </button>
-                                <button onclick="window.renderTab('hw')" class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl flex flex-col items-center gap-2 hover:bg-slate-100 transition border border-slate-100 dark:border-slate-600">
-                                    <i class="fas fa-pencil-alt text-amber-500 text-xl"></i>
-                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">Homework</span>
-                                </button>
-                             </div>
-                        </div>
                     </div>
+
                 </div>`;
         } else if (tabName === 'videos') {
             let breadcrumbHtml = '';
