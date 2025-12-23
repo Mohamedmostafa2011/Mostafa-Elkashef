@@ -223,26 +223,7 @@ async function _renderTabInternal(tabName) {
                 </div>
             `).join('');
 
-            let upNextHtml = '';
-            if (!isAdmin) {
-                const vQ = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id), where("type", "==", "video"));
-                const vSnap = await getDocs(vQ);
-                if (!vSnap.empty) {
-                    upNextHtml = `
-                    <div class="bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl p-6 text-white shadow-xl mb-8 relative overflow-hidden group cursor-pointer" onclick="window.renderTab('videos')">
-                         <div class="absolute right-0 bottom-0 opacity-10 text-[150px] leading-none -mb-10 -mr-10 group-hover:scale-110 transition duration-500"><i class="fas fa-play-circle"></i></div>
-                         <div class="relative z-10">
-                            <span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-white/30">Up Next</span>
-                            <h3 class="text-2xl font-display font-bold mt-4 mb-2">Continue Learning</h3>
-                            <p class="text-blue-100 max-w-md">Pick up where you left off. Watch the latest recordings in the video library.</p>
-                            <button class="mt-6 bg-white text-brand-primary px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition shadow-lg">Go to Videos <i class="fas fa-arrow-right ml-2"></i></button>
-                         </div>
-                    </div>`;
-                }
-            }
-
             contentHtml = `
-                ${upNextHtml}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
                     <div class="md:col-span-2">
                         <div class="flex justify-between items-center mb-4 px-1">
@@ -251,6 +232,7 @@ async function _renderTabInternal(tabName) {
                         </div>
                         ${items.length ? posts : `<div class="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">No announcements yet.</div>`}
                     </div>
+
                     <div class="space-y-6">
                         <div class="bg-brand-primary rounded-2xl p-6 text-white shadow-lg bg-math-grid relative overflow-hidden">
                             <h3 class="font-bold text-lg relative z-10">Math Hub</h3>
