@@ -607,6 +607,8 @@ export function openContentModal(type) {
     document.getElementById('content-title').value = "";
     document.getElementById('content-body').value = "";
     document.getElementById('content-link').value = "";
+    document.getElementById('content-topic-no').value = "";
+    document.getElementById('content-topic-title').value = "";
     document.getElementById('content-order').value = (state.currentItems.length + 1);
 
     const titleEl = document.getElementById('content-modal-title');
@@ -632,6 +634,9 @@ export function openContentModal(type) {
     selectedFilesMap.clear(); // Clear state
     uploadProgress.classList.add('hidden');
 
+    const topicFields = document.getElementById('topic-fields');
+    if (topicFields) topicFields.classList.add('hidden');
+
     if (type === 'announcement') {
         titleEl.innerText = "New Announcement";
         labelEl.innerText = "Message";
@@ -643,6 +648,7 @@ export function openContentModal(type) {
         body.classList.add('hidden');
         link.classList.remove('hidden');
         fileSection.classList.remove('hidden');
+        if (topicFields) topicFields.classList.remove('hidden');
     }
     else if (type === 'folder') { titleEl.innerText = "Create New Folder"; labelEl.innerText = "Description (Optional)"; body.classList.remove('hidden'); link.classList.add('hidden'); }
     else if (type === 'summary') {
@@ -665,6 +671,8 @@ export function openEditContentModal(itemStr) {
     document.getElementById('content-title').value = item.title;
     document.getElementById('content-body').value = item.content || "";
     document.getElementById('content-link').value = item.url || "";
+    document.getElementById('content-topic-no').value = item.topicNo || "";
+    document.getElementById('content-topic-title').value = item.topicTitle || "";
     document.getElementById('content-order').value = item.order || 1;
 }
 
@@ -674,6 +682,8 @@ export async function handleSaveContent() {
     const title = document.getElementById('content-title').value;
     const body = document.getElementById('content-body').value;
     const url = document.getElementById('content-link').value;
+    const topicNo = document.getElementById('content-topic-no').value;
+    const topicTitle = document.getElementById('content-topic-title').value;
     const fileInput = document.getElementById('content-file');
     const order = parseInt(document.getElementById('content-order').value) || 1;
 
@@ -742,10 +752,15 @@ export async function handleSaveContent() {
         };
 
         if (editId) {
-            await updateDoc(doc(db, "course_content", editId), { title, content: body, url, order });
+            await updateDoc(doc(db, "course_content", editId), {
+                title, content: body, url: finalUrl, order,
+                topicNo, topicTitle
+            });
             showToast("Updated successfully");
         } else {
             data.createdAt = new Date().toISOString();
+            data.topicNo = topicNo;
+            data.topicTitle = topicTitle;
             await addDoc(collection(db, "course_content"), data);
             showToast("Created successfully");
         }

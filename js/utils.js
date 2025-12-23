@@ -107,10 +107,42 @@ export function generateVideoCardHtml(item, isAdmin) {
 
         const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
         const isDrive = videoUrl.includes('drive.google.com');
+        const topicNo = item.topicNo;
+        const topicTitle = item.topicTitle;
 
         // Extract YouTube/Video Thumbnail
-        let thumbnailHtml = `<div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand-dark opacity-30"></div>`;
-        if (isYouTube) {
+        let thumbnailHtml = `<div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand-dark opacity-40"></div>`;
+
+        if (topicNo && topicTitle) {
+            // THE "IMPRESSIVE" CSS THUMBNAIL DESIGN
+            thumbnailHtml = `
+            <div class="absolute inset-0 bg-[#0f172a] overflow-hidden flex flex-col justify-center items-center text-center p-6">
+                <!-- Background Geometric Accent -->
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl"></div>
+                
+                <!-- Math Pattern Overlay -->
+                <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+
+                <!-- Topic Badge -->
+                <div class="mb-4 relative">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-1.5 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 border border-white/20 backdrop-blur-md">
+                        ${topicNo}
+                    </div>
+                </div>
+
+                <!-- Main Title -->
+                <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
+                    ${topicTitle}
+                </h3>
+
+                <!-- Branding Footer -->
+                <div class="mt-2 flex flex-col items-center gap-2">
+                    <div class="h-0.5 w-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                    <span class="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] font-display">Mostafa Elkashef</span>
+                </div>
+            </div>`;
+        } else if (isYouTube) {
             let videoId = "";
             if (videoUrl.includes('watch?v=')) videoId = videoUrl.split('v=')[1]?.split('&')[0];
             else if (videoUrl.includes('youtu.be/')) videoId = videoUrl.split('youtu.be/')[1]?.split('?')[0];
@@ -141,25 +173,28 @@ export function generateVideoCardHtml(item, isAdmin) {
         }
 
         const safeUrl = videoUrl.replace(/'/g, "\\'");
+        const isDynamic = !!(topicNo && topicTitle);
+
         let contentDisplay = `
         <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${safeUrl}', 'video')">
             <!-- Dynamic Thumbnail -->
             ${thumbnailHtml}
 
-            <!-- Center Play Button Overlay -->
-            <div class="absolute inset-0 flex items-center justify-center">
-                <div class="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-2xl group-hover/video:scale-110 group-hover/video:bg-brand-primary group-hover/video:border-brand-primary transition-all duration-300 shadow-2xl z-10">
-                    <i class="fas fa-play ml-1"></i>
+            <!-- Play Button Overlay (Ghost Style on Hover for Dynamic, Solid for Regular) -->
+            <div class="absolute inset-0 flex items-center justify-center z-30">
+                <div class="w-16 h-16 rounded-full ${isDynamic ? 'bg-white/0 border-white/0' : 'bg-white/10 backdrop-blur-md border-white/20'} flex items-center justify-center text-white text-2xl group-hover/video:scale-110 group-hover/video:bg-brand-primary/80 group-hover/video:border-brand-primary group-hover/video:backdrop-blur-md transition-all duration-300 shadow-2xl">
+                    <i class="fas fa-play ml-1 ${isDynamic ? 'opacity-0 group-hover/video:opacity-100' : ''}"></i>
                 </div>
             </div>
             
-            <!-- Metadata Badge -->
+            <!-- Metadata Badge (Hidden for Dynamic) -->
+            ${!isDynamic ? `
             <div class="absolute top-3 left-3 z-20">
                 <span class="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-md border border-white/10 uppercase tracking-widest leading-none flex items-center gap-1">
                     <i class="fas ${isYouTube ? 'fa-youtube text-red-500' : 'fa-play-circle text-brand-primary'} text-[10px]"></i>
                     ${isYouTube ? 'YouTube' : 'Video'}
                 </span>
-            </div>
+            </div>` : ''}
 
             ${attachments.length > 1 ? `
             <div class="absolute top-3 right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-white/20 uppercase tracking-widest leading-none z-20">

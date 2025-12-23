@@ -311,11 +311,22 @@
                             class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
                             placeholder="e.g. Session 1">
                     </div>
-                    <div class="w-24 hidden">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Order</label>
-                        <input type="number" id="content-order"
+                    <input type="hidden" id="content-order" value="1">
+                </div>
+
+                <!-- Topic Designer Fields -->
+                <div id="topic-fields" class="grid grid-cols-1 sm:grid-cols-3 gap-4 hidden">
+                    <div class="sm:col-span-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Topic Index</label>
+                        <input type="text" id="content-topic-no"
                             class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition"
-                            placeholder="1" value="1">
+                            placeholder="Topic 1">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Topic Title</label>
+                        <input type="text" id="content-topic-title"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition"
+                            placeholder="Math Foundations">
                     </div>
                 </div>
 
