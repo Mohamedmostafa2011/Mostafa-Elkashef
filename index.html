@@ -412,11 +412,38 @@
         </div>
     </div>
 
+    <!-- VIDEO ANALYTICS MODAL -->
+    <div id="video-analytics-modal" class="fixed inset-0 z-[80] hidden">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
+            onclick="document.getElementById('video-analytics-modal').classList.add('hidden')"></div>
+        <div
+            class="absolute inset-x-4 top-[10%] bottom-[10%] md:inset-x-[15%] md:top-[15%] md:bottom-[15%] bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in duration-300">
+            <div
+                class="bg-white dark:bg-slate-900 p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Video Analytics</h2>
+                    <p class="text-slate-500 text-sm">Viewer engagement statistics</p>
+                </div>
+                <button onclick="document.getElementById('video-analytics-modal').classList.add('hidden')"
+                    class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="analytics-content" class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950/50">
+                <!-- Data will be injected here -->
+                <div class="flex items-center justify-center h-full">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 
     <!-- Main Application Logic -->
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=cachebust"></script>
 
 </body>
 

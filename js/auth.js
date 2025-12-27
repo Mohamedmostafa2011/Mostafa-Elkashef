@@ -85,11 +85,57 @@ async function handleSignup() {
     const email = phone.replace('+', '') + "@igmath.com";
     const isAdmin = phone === '+11234567890'; // Hardcoded admin
 
+    // --- RECOVERY / REGISTRATION LOGIC ---
+    // Try to create a new user. If failure due to "email-already-in-use", 
+    // it implies the Auth User exists but the student might have been deleted from Firestore.
+    // In that case, we try to recover by signing them in and recreating the Firestore doc.
     try {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        await setDoc(doc(db, "users", cred.user.uid), {
-            name, phone, role: isAdmin ? 'admin' : 'student', status: isAdmin ? 'approved' : 'pending', courseId, subcourseCode, uid: cred.user.uid, createdAt: new Date().toISOString()
-        });
+        // Regular Success Path (New Auth + New Firestore)
+        await createFirestoreUser(cred.user.uid, name, phone, courseId, subcourseCode, isAdmin);
         showToast("Account Created!");
-    } catch (e) { showToast(e.message, "error"); }
+    } catch (e) {
+        if (e.code === 'auth/email-already-in-use') {
+            console.log("User exists in Auth. Checking for recovery...");
+            // Attempt to sign in with provided password to verify ownership
+            try {
+                const credential = await signInWithEmailAndPassword(auth, email, pass);
+                // Check if Firestore document exists
+                const userDoc = await getDoc(doc(db, "users", credential.user.uid));
+
+                if (!userDoc.exists()) {
+                    // RECOVERY PATH: Auth exists, Firestore missing (deleted student).
+                    // Re-create the Firestore record with the NEW data they just entered.
+                    await createFirestoreUser(credential.user.uid, name, phone, courseId, subcourseCode, isAdmin);
+                    showToast("Account Restored!");
+                    // Force reload/redirect handled by auth state listener
+                } else {
+                    // User already exists fully.
+                    showToast("Account already exists. Please Log In.", "info");
+                    switchTab('login');
+                }
+            } catch (signInErr) {
+                // Password didn't match or other error
+                console.error(signInErr);
+                showToast("Phone number registered. Wrong password?", "error");
+            }
+        } else {
+            // Other registration (e.g., weak password)
+            console.error(e);
+            showToast(e.message, "error");
+        }
+    }
+}
+
+async function createFirestoreUser(uid, name, phone, courseId, subcourseCode, isAdmin) {
+    await setDoc(doc(db, "users", uid), {
+        name,
+        phone,
+        role: isAdmin ? 'admin' : 'student',
+        status: isAdmin ? 'approved' : 'pending',
+        courseId,
+        subcourseCode,
+        uid,
+        createdAt: new Date().toISOString()
+    });
 }

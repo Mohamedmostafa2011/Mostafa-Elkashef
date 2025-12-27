@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
-import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js";
+import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal, openVideoAnalytics } from "./admin.js?v=5";
 import { renderStudentDashboard } from "./student.js";
 import { renderTab, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal } from "./dashboard_v2.js";
 import { showToast } from "./utils.js";
@@ -34,6 +34,7 @@ window.openFileViewer = openFileViewer;
 window.closeFileViewer = closeFileViewer;
 window._closeViewerInternal = _closeViewerInternal;
 window.deleteStudentAccount = deleteStudentAccount;
+window.openVideoAnalytics = openVideoAnalytics;
 
 // Sidebar Toggles
 document.getElementById('open-sidebar').onclick = () => { document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('mobile-overlay').classList.remove('hidden'); };

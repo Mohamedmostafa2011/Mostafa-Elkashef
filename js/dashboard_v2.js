@@ -1,5 +1,5 @@
 import { db } from "./config.js";
-import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils.js";
 import { renderAdminHome } from "./admin.js";
@@ -546,6 +546,12 @@ export function _closeViewerInternal() {
     const content = document.getElementById('file-viewer-content');
     modal.classList.add('hidden');
     content.innerHTML = '';
+
+    // Stop Tracking
+    if (typeof playbackInterval !== 'undefined' && playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+    }
 }
 
 // Helper to render PDF using PDF.js
@@ -678,7 +684,101 @@ export function openFileViewer(url, type = 'file') {
                     <p class="text-slate-400 mb-6">This file type cannot be previewed directly.</p>
                 </div>`;
     }
+
+    // --- ANALYTICS TRACKING START ---
+    if (state.currentUserData.role !== 'admin') {
+        const videoId = typeof url === 'string' ? (url.includes('id=') ? url : url) : 'unknown_video'; // Simple ID derivation or pass explicit ID
+        // Note: url might be a long string. ideally we pass the item.id to openFileViewer. 
+        // But openFileViewer currently only takes url. 
+        // We will improve this by checking if we can derive ID or pass it.
+        // For now, let's look at how openFileViewer is called. 
+        // It's called with item.url. 
+        // We might need to change the signature of openFileViewer or look up the item.
+        startVideoTracking(url);
+    }
 }
+
+// --- VIDEO ANALYTICS LOGIC ---
+let playbackInterval = null;
+let currentTrackingVideoUrl = null;
+let lastVideoTime = 0;
+
+function startVideoTracking(videoUrl) {
+    if (playbackInterval) clearInterval(playbackInterval);
+    currentTrackingVideoUrl = videoUrl;
+    lastVideoTime = 0;
+
+    // Find the video element if it exists (Native Video)
+    setTimeout(() => {
+        const videoEl = document.querySelector('#file-viewer-content video');
+        if (videoEl) {
+            videoEl.addEventListener('timeupdate', () => {
+                const currentTime = videoEl.currentTime;
+                const duration = videoEl.duration;
+                if (currentTime > lastVideoTime) {
+                    const diff = currentTime - lastVideoTime;
+                    if (diff < 2) { // Only count normal playback, not skips
+                        updateVideoProgress(videoUrl, diff, currentTime, duration);
+                    }
+                }
+                lastVideoTime = currentTime;
+            });
+
+            videoEl.addEventListener('ended', () => {
+                updateVideoProgress(videoUrl, 0, videoEl.duration, videoEl.duration, true);
+            });
+        }
+
+        // For others (YouTube/Drive/PDF), we can only track "Time Spent Open" roughly
+        // or just mark as "Viewed"
+        if (!videoEl) {
+            updateVideoProgress(videoUrl, 0, 0, 0); // Just mark opened
+            playbackInterval = setInterval(() => {
+                const viewer = document.getElementById('file-viewer-modal');
+                if (!viewer.classList.contains('hidden')) {
+                    updateVideoProgress(videoUrl, 5, 0, 0); // Add 5 seconds every 5 seconds
+                } else {
+                    clearInterval(playbackInterval);
+                }
+            }, 5000);
+        }
+    }, 1000);
+}
+
+async function updateVideoProgress(url, secondsWatched, currentPos, duration, isCompleted = false) {
+    if (!state.currentUserData || state.currentUserData.role === 'admin') return;
+
+    // We need a stable ID. URL is okay if it's unique.
+    // Ideally we match it to the course content ID.
+    // Let's try to find the item ID from state.currentItems if possible
+    let itemId = null;
+    if (state.currentItems) {
+        const item = state.currentItems.find(i => i.url === url || (i.attachments && i.attachments.some(a => a.url === url)));
+        if (item) itemId = item.id;
+    }
+
+    if (!itemId) itemId = btoa(url).slice(0, 20); // Fallback ID from URL
+
+    const analyticsId = `${itemId}_${state.currentUserData.uid}`;
+    const docRef = doc(db, "video_analytics", analyticsId);
+
+    try {
+        await setDoc(docRef, {
+            videoId: itemId,
+            videoTitle: currentTrackingVideoUrl, // We might want a better title
+            userId: state.currentUserData.uid,
+            userName: state.currentUserData.name,
+            lastUpdated: new Date().toISOString(),
+            isCompleted: isCompleted,
+            secondsWatched: increment(secondsWatched),
+            lastPosition: currentPos || 0,
+            duration: duration || 0
+        }, { merge: true });
+    } catch (e) {
+        console.error("Analytics Error:", e);
+    }
+}
+
 
 export function openContentModal(type) {
     document.getElementById('content-type').value = type;

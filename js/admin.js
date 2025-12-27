@@ -191,3 +191,190 @@ export async function handleDeleteCourse() {
     renderAdminHome();
     showToast("Deleted");
 }
+
+// --- ANALYTICS ---
+export async function openVideoAnalytics(videoId) {
+    document.getElementById('video-analytics-modal').classList.remove('hidden');
+    const container = document.getElementById('analytics-content');
+    container.innerHTML = `<div class="flex items-center justify-center h-full"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div></div>`;
+
+    try {
+        // 1. Fetch Video Stats
+        const q = query(collection(db, "video_analytics"), where("videoId", "==", videoId));
+        const snap = await getDocs(q);
+        let stats = [];
+        snap.forEach(d => stats.push(d.data()));
+
+        // 2. Fetch Course Context (to get total students)
+        let allStudents = [];
+        if (state.activeCourseContext && state.activeCourseContext.id) {
+            // Simplify query to avoid "Missing Index" errors for compound queries
+            // Fetch users by Course ID
+            let userQ = query(collection(db, "users"), where("courseId", "==", state.activeCourseContext.id));
+
+            if (state.activeCourseContext.subcode) {
+                // If subcourse exists, filter by that too (Chain of equality usually works without custom index)
+                userQ = query(collection(db, "users"), where("courseId", "==", state.activeCourseContext.id), where("subcourseCode", "==", state.activeCourseContext.subcode));
+            }
+
+            try {
+                const userSnap = await getDocs(userQ);
+                userSnap.forEach(d => {
+                    const data = d.data();
+                    // Client-side filter for admins to avoid needing a complex index (role != 'admin')
+                    if (data.role !== 'admin') {
+                        allStudents.push({ id: d.id, ...data });
+                    }
+                });
+            } catch (userError) {
+                console.warn("Could not fetch students:", userError);
+                // Don't fail the whole analytics view if user fetch fails, just show what we have
+            }
+        }
+
+        // 3. Process Data
+        const watchedUserIds = new Set(stats.map(s => s.userId));
+        const notWatched = allStudents.filter(u => !watchedUserIds.has(u.id));
+
+        // Sort by seconds watched descending
+        stats.sort((a, b) => b.secondsWatched - a.secondsWatched);
+
+        // 4. Calculate Stats & Heuristics
+        const totalStudents = allStudents.length || stats.length || 0;
+        const totalViewers = stats.length;
+
+        // Find maximum watched time to use as fallback duration (User's request "logically max")
+        const maxSecondsWatched = stats.reduce((max, s) => Math.max(max, s.secondsWatched || 0), 0);
+
+        let totalDuration = 0;
+        let totalCompletion = 0;
+        let validDurationCount = 0;
+
+        stats.forEach(s => {
+            const watched = s.secondsWatched || 0;
+            totalDuration += watched;
+
+            // Use stored duration, or fallback to max watched time if stored is missing/zero
+            const effectiveDuration = (s.duration && s.duration > 0) ? s.duration : maxSecondsWatched;
+
+            if (effectiveDuration > 0) {
+                const p = Math.min(100, Math.round((watched / effectiveDuration) * 100));
+                totalCompletion += p;
+                validDurationCount++;
+            }
+        });
+
+        const avgTime = totalViewers ? Math.round(totalDuration / totalViewers) : 0;
+        const avgCompletion = validDurationCount ? Math.round(totalCompletion / validDurationCount) : 0;
+
+        const formatTime = (seconds) => {
+            const m = Math.floor(seconds / 60);
+            const s = Math.round(seconds % 60);
+            return `${m}m ${s}s`;
+        };
+
+        let html = `
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                    <p class="text-xs font-bold text-brand-primary uppercase tracking-widest">Total Viewers</p>
+                    <p class="text-2xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
+                        ${totalViewers} <span class="text-sm font-bold opacity-50">/ ${totalStudents}</span>
+                    </p>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl border border-purple-100 dark:border-purple-800">
+                    <p class="text-xs font-bold text-purple-600 uppercase tracking-widest">Avg. Watch Time</p>
+                    <p class="text-2xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
+                        ${formatTime(avgTime)}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 mb-6">
+                <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Watched List</h3>
+                    <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${stats.length}</span>
+                </div>
+                <table class="w-full text-sm table-fixed">
+                    <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+                        <tr>
+                            <th class="px-4 py-3 text-left w-1/2">Student</th>
+                            <th class="px-4 py-3 text-right w-1/4">Time Watched</th>
+                            <th class="px-4 py-3 text-right w-1/4">Last Watched</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto w-full">
+        `;
+
+        if (stats.length === 0) {
+            html += `<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">No one has watched this video yet.</td></tr>`;
+        } else {
+            stats.forEach(s => {
+                const last = s.lastUpdated ? new Date(s.lastUpdated).toLocaleDateString() : 'N/A';
+                const watched = s.secondsWatched || 0;
+
+                const effectiveDuration = (s.duration && s.duration > 0) ? s.duration : maxSecondsWatched;
+
+                let isCompleted = false;
+                let isEstimate = false;
+
+                if (effectiveDuration > 0) {
+                    const pct = Math.min(100, Math.round((watched / effectiveDuration) * 100));
+                    if (s.duration <= 0) isEstimate = true;
+
+                    if (pct >= 90) isCompleted = true;
+                } else if (s.isCompleted) {
+                    isCompleted = true;
+                }
+
+                let statusIcon = isCompleted
+                    ? `<i class="fas fa-check-circle text-green-500" title="Completed"></i>`
+                    : `<i class="fas fa-clock text-slate-300" title="In Progress"></i>`;
+
+                html += `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                        <td class="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 truncate">${s.userName || 'Unknown'}</td>
+                        <td class="px-4 py-3 text-right font-mono text-slate-600 dark:text-slate-400">
+                            ${formatTime(watched)}
+                        </td>
+                        <td class="px-4 py-3 text-right text-slate-400 text-xs font-mono">${last}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `</tbody></table></div>`;
+
+        // NOT WATCHED SECTION
+        html += `
+            <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                 <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="document.getElementById('not-watched-list').classList.toggle('hidden');">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Not Watched Yet</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">${notWatched.length}</span>
+                        <i class="fas fa-chevron-down text-slate-300 text-xs"></i>
+                    </div>
+                </div>
+                <div id="not-watched-list" class="hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-40 overflow-y-auto">
+        `;
+
+        if (notWatched.length === 0) {
+            html += `<div class="p-4 text-center text-slate-400 text-xs">Everyone has watched this video! 🎉</div>`;
+        } else {
+            notWatched.forEach(u => {
+                html += `
+                    <div class="px-4 py-2 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">${u.name}</span>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">${u.phone || 'N/A'}</span>
+                    </div>
+                `;
+            });
+        }
+        html += `</div></div>`;
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = `<div class="p-4 text-red-500 text-center">Error loading analytics</div>`;
+    }
+}

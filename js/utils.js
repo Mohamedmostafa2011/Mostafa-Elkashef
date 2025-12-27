@@ -216,6 +216,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">${item.title}</h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
+                        <button onclick="window.openVideoAnalytics('${item.id}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="View Analytics"><i class="fas fa-eye text-xs"></i></button>
                         <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
                         <button onclick="window.deleteContent('${item.id}', 'videos')" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash text-xs"></i></button>
                     </div>` : ''}
