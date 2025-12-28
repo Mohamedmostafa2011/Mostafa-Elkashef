@@ -81,13 +81,13 @@ export function openCourseDashboard(id, title, subcode) {
         `<button onclick="window.renderTab('students')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-users w-5 text-center"></i> Students</button>`
         : '';
 
+    // Updated Navigation: Home, Videos, Files
     document.getElementById('nav-links').innerHTML = `
         ${backBtn}
         <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
-        <button onclick="window.renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-bullhorn w-5 text-center"></i> Home</button>
+        <button onclick="window.renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-home w-5 text-center"></i> Home</button>
         <button onclick="window.renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
-        <button onclick="window.renderTab('summaries')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-file-alt w-5 text-center"></i> Summaries</button>
-        <button onclick="window.renderTab('hw')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
+        <button onclick="window.renderTab('files')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-folder-open w-5 text-center"></i> Files</button>
         ${studentsTab}
     `;
     renderTab('home');
@@ -97,6 +97,7 @@ export async function renderTab(tabName, fromHistory = false) {
     if (!fromHistory) {
         history.pushState({ tab: tabName }, "", `#${tabName}`);
     }
+    state.activeTab = tabName; // Track active tab for navigation
     withViewTransition(async () => {
         _renderTabInternal(tabName);
     });
@@ -107,11 +108,9 @@ async function _renderTabInternal(tabName) {
     if (state.sortableInstance) { state.sortableInstance.destroy(); state.sortableInstance = null; }
 
     document.querySelectorAll('.tab-btn').forEach(b => {
-        if (b.getAttribute('onclick').includes(tabName)) {
-            b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors";
-        } else {
-            b.className = "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1 transition-colors";
-        }
+        b.className = (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabName))
+            ? "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors"
+            : "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1 transition-colors";
     });
 
     const container = document.getElementById('main-view');
@@ -244,11 +243,45 @@ async function _renderTabInternal(tabName) {
             return;
         }
 
-        // --- CONTENT TABS ---
-        const typeMap = { 'home': 'announcement', 'videos': 'video', 'summaries': 'summary', 'hw': 'homework' };
+        // --- NEW HOME (SHORTCUTS) ---
+        if (tabName === 'home') {
+            container.innerHTML = header + `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 fade-in h-[50vh] items-center">
+                    <!-- Videos Shortcut -->
+                    <div onclick="window.renderTab('videos')" class="group relative bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer overflow-hidden h-full flex flex-col justify-center text-center">
+                        <div class="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-slate-800 dark:to-slate-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="relative z-10">
+                            <div class="w-24 h-24 mx-auto bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <h2 class="text-4xl font-black text-slate-900 dark:text-white font-display tracking-tight mb-2">Videos</h2>
+                            <p class="text-slate-500 font-medium">Access your lessons and recordings</p>
+                        </div>
+                    </div>
+
+                    <!-- Files Shortcut -->
+                    <div onclick="window.renderTab('files')" class="group relative bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer overflow-hidden h-full flex flex-col justify-center text-center">
+                        <div class="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-slate-800 dark:to-slate-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="relative z-10">
+                            <div class="w-24 h-24 mx-auto bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <h2 class="text-4xl font-black text-slate-900 dark:text-white font-display tracking-tight mb-2">Files</h2>
+                            <p class="text-slate-500 font-medium">Browse documents and resources</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // --- CONTENT TABS (VIDEOS & FILES) ---
+        // typeMap now points: videos -> video, files -> file
+        const typeMap = { 'videos': 'video', 'files': 'file' };
         const dbType = typeMap[tabName];
-        let qTypes = [dbType];
-        if (tabName === 'videos') qTypes.push('folder');
+
+        // Both sections support folders
+        let qTypes = [dbType, 'folder'];
 
         const q = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id));
         const snap = await getDocs(q);
@@ -257,10 +290,39 @@ async function _renderTabInternal(tabName) {
         snap.forEach(d => {
             const data = d.data();
             if (data.subcourseCode && data.subcourseCode !== state.activeCourseContext.subcode) return;
-            if (!qTypes.includes(data.type)) return;
-            if (tabName === 'videos') {
-                if (state.currentFolderId === null) { if (data.parentId) return; }
-                else { if (data.parentId !== state.currentFolderId) return; }
+
+            // Filter by type
+            // Note: If we use generic 'folder' type for both, we need to distinguish them.
+            // Assumption: Folders created in "Files" tab should show in Files, Videos in Videos.
+            // We can add a 'section' field to folders, OR just assume existing 'folder' type belongs to Videos (legacy) 
+            // and maybe introduce 'file_folder' for Files? 
+            // Let's stick to using 'folder' type but maybe filter by 'tab' property if we adding it?
+            // Actually, simplest is to filter based on parentId for nested items. 
+            // But top-level folders need to be distinguished.
+            // Let's assume for now existing folders are for videos.
+            // I will add logic: if type is 'folder' AND tabName is 'files', only show if it has section='files' (if I add that field).
+            // Current data doesn't have 'section'. 
+            // PROPOSAL: Use type 'folder' for videos, and 'file_folder' for files.
+
+            if (tabName === 'files') {
+                if (data.type === 'file' || data.type === 'file_folder') {
+                    // It's a file item
+                } else {
+                    return;
+                }
+            } else if (tabName === 'videos') {
+                if (data.type === 'video' || data.type === 'folder') {
+                    // It's a video item
+                } else {
+                    return;
+                }
+            }
+
+            // Folder Navigation Logic
+            if (state.currentFolderId === null) {
+                if (data.parentId) return;
+            } else {
+                if (data.parentId !== state.currentFolderId) return;
             }
             items.push({ id: d.id, ...data });
         });
@@ -275,48 +337,7 @@ async function _renderTabInternal(tabName) {
 
         state.currentItems = items;
 
-        if (tabName === 'home') {
-            const posts = items.map(item => `
-                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm mb-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg">${item.title}</h4>
-                        ${isAdmin ? `
-                        <div class="flex gap-2 text-slate-400">
-                            <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="hover:text-brand-primary transition-colors"><i class="fas fa-pencil-alt text-sm"></i></button>
-                            <button onclick="window.deleteContent('${item.id}', 'home')" class="hover:text-red-500 transition-colors"><i class="fas fa-trash text-sm"></i></button>
-                        </div>` : ''}
-                    </div>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">${item.content}</p>
-                    
-                    ${generateAttachmentsHtml(item.attachments || [], item.title)}
-                    
-                    ${(!item.attachments || item.attachments.length === 0) && item.url ? `
-                        <div class="mt-4">
-                            <button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-2 rounded-lg text-sm font-bold text-brand-primary hover:bg-slate-100 transition border border-slate-100 dark:border-slate-600">
-                                <i class="fas fa-link"></i> View Attachment
-                            </button>
-                        </div>
-                    ` : ''}
-                    
-                    <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase tracking-widest opacity-70">${new Date(item.createdAt).toLocaleDateString()}</p>
-                </div>
-            `).join('');
-
-            contentHtml = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
-                    <div class="md:col-span-2">
-                        <div class="flex justify-between items-center mb-4 px-1">
-                            <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100">Announcements</h3>
-                            ${isAdmin ? `<button onclick="window.openContentModal('announcement')" class="text-sm text-brand-primary font-bold hover:underline">+ New Post</button>` : ''}
-                        </div>
-                        ${items.length ? posts : `<div class="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">No announcements yet.</div>`}
-                    </div>
-                    <div class="space-y-6">
-                        <!-- Space for future widgets or side info -->
-                    </div>
-
-                </div>`;
-        } else if (tabName === 'videos') {
+        if (tabName === 'videos' || tabName === 'files') {
             let breadcrumbHtml = '';
             if (state.currentFolderId) {
                 breadcrumbHtml = `<div class="flex items-center gap-2 mb-4 text-sm font-bold text-slate-500 fade-in px-1">
@@ -330,105 +351,40 @@ async function _renderTabInternal(tabName) {
 
             const grid = items.map(item => generateVideoCardHtml(item, isAdmin)).join('');
 
+            // Define icons and titles based on tab
+            const sectionTitle = state.currentFolderId ? 'Folder Contents' : (tabName === 'videos' ? 'Video Library' : 'File Repository');
+            const emptyIcon = tabName === 'videos' ? 'fa-video-slash' : 'fa-folder-open';
+            const emptyText = tabName === 'videos' ? 'No videos found.' : 'No files found.';
+            const createFolderType = tabName === 'videos' ? 'folder' : 'file_folder';
+            const createItemType = tabName === 'videos' ? 'video' : 'file';
+
             contentHtml = `
                 ${breadcrumbHtml}
                 <div class="flex flex-col md:flex-row justify-between items-center mb-8 fade-in gap-4">
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">${state.currentFolderId ? 'Folder Contents' : 'Library'}</h2>
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">${sectionTitle}</h2>
                     
                     <div class="flex gap-2 w-full md:w-auto items-center">
                         <div class="relative flex-1 md:w-64">
                             <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                            <input type="text" oninput="window.filterVideoItems(this.value)" placeholder="Search library..." class="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:border-brand-primary outline-none focus:ring-4 focus:ring-brand-primary/5 transition">
+                            <input type="text" oninput="window.filterVideoItems(this.value)" placeholder="Search..." class="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:border-brand-primary outline-none focus:ring-4 focus:ring-brand-primary/5 transition">
                         </div>
                     
                         ${isAdmin ? `
                         <div class="flex gap-2 shrink-0">
-                            <button onclick="window.openContentModal('folder')" class="h-10 w-10 flex items-center justify-center bg-yellow-50 text-yellow-600 rounded-xl font-bold hover:bg-yellow-100 transition" title="New Folder"><i class="fas fa-folder-plus"></i></button>
-                            <button onclick="window.openContentModal('video')" class="h-10 w-10 flex items-center justify-center bg-brand-primary text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-600 transition" title="Add Video"><i class="fas fa-plus"></i></button>
+                            <button onclick="window.openContentModal('${createFolderType}')" class="h-10 w-10 flex items-center justify-center bg-yellow-50 text-yellow-600 rounded-xl font-bold hover:bg-yellow-100 transition" title="New Folder"><i class="fas fa-folder-plus"></i></button>
+                            <button onclick="window.openContentModal('${createItemType}')" class="h-10 w-10 flex items-center justify-center bg-brand-primary text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-600 transition" title="Add Item"><i class="fas fa-plus"></i></button>
                         </div>` : ''}
                     </div>
                 </div>
                 ${items.length ? `<div id="video-sortable-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in px-0.5">${grid}</div>` :
-                    `<div class="bg-white dark:bg-slate-800 rounded-[2rem] p-16 text-center border border-slate-100 dark:border-slate-700 shadow-sm"><div class="inline-block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-full text-slate-300 mb-4 animate-bounce"><i class="fas fa-folder-open text-3xl"></i></div><p class="text-slate-500 font-bold">This folder is empty.</p></div>`}
+                    `<div class="bg-white dark:bg-slate-800 rounded-[2rem] p-16 text-center border border-slate-100 dark:border-slate-700 shadow-sm"><div class="inline-block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-full text-slate-300 mb-4 animate-bounce"><i class="fas ${emptyIcon} text-3xl"></i></div><p class="text-slate-500 font-bold">${emptyText}</p></div>`}
             `;
-        } else if (tabName === 'summaries') {
-            const list = items.map(item => `
-                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-500 flex items-center justify-center text-xl shadow-sm"><i class="fas fa-file-pdf"></i></div>
-                            <div>
-                                <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">${item.title}</h4>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">${new Date(item.createdAt).toLocaleDateString()}</p>
-                            </div>
-                        </div>
-                        ${isAdmin ? `
-                        <div class="flex gap-2">
-                             <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary p-1"><i class="fas fa-pencil-alt text-xs"></i></button>
-                             <button onclick="window.deleteContent('${item.id}', 'summaries')" class="text-slate-300 hover:text-red-500 p-1"><i class="fas fa-trash text-xs"></i></button>
-                        </div>` : ''}
-                    </div>
-                    
-                    ${generateAttachmentsHtml(item.attachments || [], item.title)}
-                    
-                    ${(!item.attachments || item.attachments.length === 0) && item.url ? `
-                        <button onclick="window.openFileViewer('${item.url}', 'file')" class="mt-2 text-brand-primary text-sm font-bold hover:underline flex items-center gap-2">
-                            <i class="fas fa-external-link-alt text-[10px]"></i> View Linked PDF
-                        </button>
-                    ` : ''}
-                </div>
-            `).join('');
-
-            contentHtml = `
-                <div class="flex justify-between items-center mb-8 fade-in">
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Summaries</h2>
-                    ${isAdmin ? `<button onclick="window.openContentModal('summary')" class="bg-brand-dark text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition shadow-lg"><i class="fas fa-plus mr-2"></i> Add Summary</button>` : ''}
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
-                    ${items.length ? list : `<div class="col-span-full p-16 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 font-bold">No summaries available.</div>`}
-                </div>`;
-        } else if (tabName === 'hw') {
-            const list = items.map(item => `
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm relative group">
-                    <div class="flex justify-between items-start mb-4">
-                         <div class="flex items-center gap-4">
-                             <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center text-xl shadow-sm"><i class="fas fa-tasks"></i></div>
-                             <div>
-                                 <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">${item.title}</h4>
-                                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">${new Date(item.createdAt).toLocaleDateString()}</p>
-                             </div>
-                         </div>
-                         ${isAdmin ? `
-                         <div class="flex gap-2">
-                             <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary p-1"><i class="fas fa-pencil-alt text-xs"></i></button>
-                             <button onclick="window.deleteContent('${item.id}', 'hw')" class="text-slate-300 hover:text-red-500 p-1"><i class="fas fa-trash text-xs"></i></button>
-                         </div>` : ''}
-                    </div>
-                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed whitespace-pre-wrap mb-4 font-medium">${item.content}</p>
-                    
-                    ${generateAttachmentsHtml(item.attachments || [], item.title)}
-
-                    ${(!item.attachments || item.attachments.length === 0) && item.url ? `
-                    <button onclick="window.openFileViewer('${item.url}', 'file')" class="inline-flex items-center gap-2 text-brand-primary font-bold text-sm hover:underline">
-                        <i class="fas fa-link"></i> View Attachment
-                    </button>` : ''}
-                </div>
-            `).join('');
-
-            contentHtml = `
-                <div class="flex justify-between items-center mb-8 fade-in">
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Homework</h2>
-                    ${isAdmin ? `<button onclick="window.openContentModal('homework')" class="bg-brand-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-600 transition"><i class="fas fa-plus mr-2"></i> New Task</button>` : ''}
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
-                    ${items.length ? list : `<div class="col-span-full p-16 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-700 text-slate-400 font-bold">Great job! No homework found.</div>`}
-                </div>`;
         }
 
         container.innerHTML = header + contentHtml;
 
         // --- INITIALIZE SORTABLE ---
-        if (tabName === 'videos' && isAdmin && items.length > 0) {
+        if ((tabName === 'videos' || tabName === 'files') && isAdmin && items.length > 0) {
             initSortable();
         }
 
@@ -441,7 +397,8 @@ async function _renderTabInternal(tabName) {
 
 export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromHistory = false) {
     if (!fromHistory) {
-        history.pushState({ tab: 'videos', folderId: id, folderTitle: title }, "", `#videos${id ? '/' + id : ''}`);
+        const currentTab = state.activeTab || 'videos';
+        history.pushState({ tab: currentTab, folderId: id, folderTitle: title }, "", `#${currentTab}${id ? '/' + id : ''}`);
     }
 
     withViewTransition(() => {
@@ -468,7 +425,7 @@ export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromH
                 }
             }
         }
-        _renderTabInternal('videos');
+        _renderTabInternal(state.activeTab || 'videos');
     });
 }
 
@@ -682,6 +639,9 @@ export function openFileViewer(url, type = 'file') {
                     </div>
                     <h3 class="text-2xl font-bold mb-2">Preview Not Available</h3>
                     <p class="text-slate-400 mb-6">This file type cannot be previewed directly.</p>
+                    <a href="${url}" target="_blank" class="bg-brand-primary text-white px-6 py-3 rounded-xl font-bold inline-flex items-center gap-2 hover:bg-brand-dark transition-colors">
+                        <i class="fas fa-download"></i> Download / Open File
+                    </a>
                 </div>`;
     }
 
@@ -829,13 +789,19 @@ export function openContentModal(type) {
         fileSection.classList.remove('hidden');
         if (topicFields) topicFields.classList.remove('hidden');
     }
-    else if (type === 'folder') { titleEl.innerText = "Create New Folder"; labelEl.innerText = "Description (Optional)"; body.classList.remove('hidden'); link.classList.add('hidden'); }
-    else if (type === 'summary') {
-        titleEl.innerText = "Add Summary";
-        labelEl.innerText = "PDF/Drive URL (Or Upload File)";
+    else if (type === 'folder' || type === 'file_folder') {
+        titleEl.innerText = "Create New Folder";
+        labelEl.innerText = "Description (Optional)";
+        body.classList.remove('hidden');
+        link.classList.add('hidden');
+    }
+    else if (type === 'summary' || type === 'file') {
+        titleEl.innerText = type === 'file' ? "Add File" : "Add Summary";
+        labelEl.innerText = "URL (Or Upload File)";
         body.classList.add('hidden');
         link.classList.remove('hidden');
         fileSection.classList.remove('hidden');
+        if (topicFields) topicFields.classList.remove('hidden');
     }
     else if (type === 'homework') { titleEl.innerText = "Assign Homework"; labelEl.innerText = "Instructions"; link.classList.remove('hidden'); link.placeholder = "Optional Link (e.g. Worksheet URL)"; }
 
@@ -918,7 +884,7 @@ export async function handleSaveContent() {
 
 
     if (!title) return showToast("Title required", "error");
-    if ((type === 'video' || type === 'summary') && !finalUrl) return showToast("URL or File required", "error");
+    if ((type === 'video' || type === 'summary' || type === 'file') && !finalUrl) return showToast("URL or File required", "error");
 
     try {
         const data = {
@@ -944,8 +910,22 @@ export async function handleSaveContent() {
             showToast("Created successfully");
         }
         toggleContentModal();
-        const tabMap = { 'announcement': 'home', 'video': 'videos', 'folder': 'videos', 'summary': 'summaries', 'homework': 'hw' };
-        renderTab(tabMap[type]);
+        const tabMap = {
+            'announcement': 'home',
+            'video': 'videos', 'folder': 'videos',
+            'file': 'files', 'file_folder': 'files',
+            'summary': 'summaries', 'homework': 'hw'
+        };
+        const nextTab = tabMap[type] || 'home';
+
+        // If we are in Files tab and created a file/folder, we want to stay in Files tab.
+        // If we created a file_folder, navigating to 'files' tab is correct.
+        // But if we are inside a folder, renderTab('files') resets to root unless we handle it?
+        // _renderTabInternal shouldn't reset foldering if state.currentFolderId is set.
+        // renderTab without args pushes current state? No. 
+        // We should just re-render current tab.
+
+        renderTab(nextTab);
     } catch (e) { console.error(e); showToast("Error saving content", "error"); }
 }
 

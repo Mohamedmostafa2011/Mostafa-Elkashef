@@ -82,14 +82,20 @@ export function generateAttachmentsHtml(attachments, title = "") {
 export function generateVideoCardHtml(item, isAdmin) {
     const dragHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-white/80 hover:text-white drop-shadow-md bg-black/20 p-1.5 rounded-lg touch-action-none"><i class="fas fa-grip-vertical text-sm"></i></div>` : '';
 
-    if (item.type === 'folder') {
-        const folderHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-yellow-300 hover:text-yellow-600 p-1.5 touch-action-none"><i class="fas fa-grip-vertical"></i></div>` : '';
+    const isFolder = item.type === 'folder' || item.type === 'file_folder';
+
+    if (isFolder) {
+        const isFileFolder = item.type === 'file_folder';
+        const baseColor = isFileFolder ? 'sky' : 'yellow';
+
+        const folderHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-${baseColor}-300 hover:text-${baseColor}-600 p-1.5 touch-action-none"><i class="fas fa-grip-vertical"></i></div>` : '';
+
         return `
-        <div data-id="${item.id}" onclick="window.navigateToFolder('${item.id}', null, '${item.title}')" class="bg-yellow-50 dark:bg-yellow-950/30 rounded-xl p-6 border border-yellow-100 dark:border-yellow-900 cursor-pointer hover:shadow-lg hover:border-yellow-300 dark:hover:border-yellow-600 transition flex flex-col items-center justify-center text-center group relative select-none h-full">
+        <div data-id="${item.id}" onclick="window.navigateToFolder('${item.id}', null, '${item.title}')" class="bg-${baseColor}-50 dark:bg-${baseColor}-950/30 rounded-xl p-6 border border-${baseColor}-100 dark:border-${baseColor}-900 cursor-pointer hover:shadow-lg hover:border-${baseColor}-300 dark:hover:border-${baseColor}-600 transition flex flex-col items-center justify-center text-center group relative select-none h-full">
             ${folderHandle}
-            <div class="text-4xl text-yellow-400 mb-2 group-hover:scale-110 transition"><i class="fas fa-folder"></i></div>
-            <h4 class="font-bold text-yellow-950 dark:text-yellow-50 line-clamp-1">${item.title}</h4>
-            <span class="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider">Folder</span>
+            <div class="text-4xl text-${baseColor}-400 mb-2 group-hover:scale-110 transition"><i class="fas fa-folder"></i></div>
+            <h4 class="font-bold text-${baseColor}-950 dark:text-${baseColor}-50 line-clamp-1">${item.title}</h4>
+            <span class="text-[10px] text-${baseColor}-600 dark:text-${baseColor}-500 font-bold uppercase tracking-wider">Folder</span>
             ${isAdmin ? `
             <div class="absolute top-2 right-2 flex gap-1 z-20" onclick="event.stopPropagation()">
                 <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-6 h-6 rounded-full bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-primary flex items-center justify-center shadow-sm"><i class="fas fa-pencil-alt text-xs"></i></button>
@@ -99,8 +105,9 @@ export function generateVideoCardHtml(item, isAdmin) {
     } else {
         const attachments = item.attachments || [];
         let videoUrl = item.url || "";
+        const isFile = item.type === 'file';
 
-        if (attachments.length > 0) {
+        if (attachments.length > 0 && !isFile) {
             const hero = attachments.find(a => a.type === 'video' || a.url.match(/\.(mp4|webm|ogg)$/i)) || attachments[0];
             videoUrl = hero.url;
         }
@@ -115,7 +122,38 @@ export function generateVideoCardHtml(item, isAdmin) {
 
         if (topicNo && topicTitle) {
             // THE "IMPRESSIVE" CSS THUMBNAIL DESIGN
-            thumbnailHtml = `
+            if (isFile) {
+                // DISTINCT DESIGN FOR FILES (Teal/Emerald Theme)
+                thumbnailHtml = `
+            <div class="absolute inset-0 bg-slate-900 overflow-hidden flex flex-col justify-center items-center text-center p-6">
+                <!-- Background Geometric Accent: Emerald/Cyan -->
+                <div class="absolute -top-32 -right-32 w-80 h-80 bg-emerald-600/20 rounded-full blur-3xl opacity-60"></div>
+                <div class="absolute -bottom-32 -left-32 w-80 h-80 bg-cyan-600/20 rounded-full blur-3xl opacity-60"></div>
+                
+                <!-- Grid Pattern Overlay -->
+                <div class="absolute inset-0 opacity-[0.05] pointer-events-none" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+                <!-- Topic/File Badge -->
+                <div class="mb-5 relative">
+                    <div class="bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 py-1.5 rounded-xl text-[11px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 border border-white/20 backdrop-blur-md flex items-center gap-2">
+                        <i class="fas fa-file-alt"></i> ${topicNo}
+                    </div>
+                </div>
+
+                <!-- Main Title -->
+                <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl mb-8 px-2">
+                    ${topicTitle}
+                </h3>
+
+                <!-- Branding Footer -->
+                <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
+                    <div class="h-0.5 w-8 bg-white/30 rounded-full"></div>
+                    <span class="text-[9px] text-white font-bold uppercase tracking-[0.3em]">Mostafa Elkashef</span>
+                </div>
+            </div>`;
+            } else {
+                // VIDEO DESIGN (Blue/Purple Theme)
+                thumbnailHtml = `
             <div class="absolute inset-0 bg-[#0f172a] overflow-hidden flex flex-col justify-center items-center text-center p-6">
                 <!-- Background Geometric Accent -->
                 <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
@@ -142,6 +180,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <span class="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] font-display">Mostafa Elkashef</span>
                 </div>
             </div>`;
+            }
         } else if (isYouTube) {
             let videoId = "";
             if (videoUrl.includes('watch?v=')) videoId = videoUrl.split('v=')[1]?.split('&')[0];
@@ -154,7 +193,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <div class="absolute inset-0 bg-black/10"></div>`;
             }
         } else if (isDrive) {
-            // High-quality placeholder for Google Drive
+            // Google Drive
             thumbnailHtml = `
             <div class="absolute inset-0 bg-gradient-to-br from-brand-primary to-brand-dark flex items-center justify-center overflow-hidden">
                 <div class="absolute inset-0 opacity-20 scale-150 rotate-12"><i class="fas fa-play-circle text-[200px] text-white"></i></div>
@@ -165,30 +204,41 @@ export function generateVideoCardHtml(item, isAdmin) {
                 </div>
             </div>
             <div class="absolute inset-0 bg-black/10"></div>`;
-        } else if (videoUrl) {
-            // First-frame preview trick for MP4/WebM/Self-hosted
+        } else if (videoUrl && !isFile) {
             thumbnailHtml = `
             <video src="${videoUrl}#t=0.1" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline></video>
             <div class="absolute inset-0 bg-black/10"></div>`;
+        } else if (isFile) {
+            // Generic File Thumbnail
+            thumbnailHtml = `
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center overflow-hidden">
+                <div class="absolute inset-0 opacity-10 rotate-12"><i class="fas fa-file text-[200px] text-white"></i></div>
+                <div class="relative z-10 flex flex-col items-center gap-2">
+                    <div class="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white text-3xl border border-white/20 shadow-xl">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <p class="text-white text-xs font-bold uppercase tracking-widest mt-2 opacity-80">Document</p>
+                </div>
+            </div>`;
         }
 
         const safeUrl = videoUrl.replace(/'/g, "\\'");
         const isDynamic = !!(topicNo && topicTitle);
 
         let contentDisplay = `
-        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${safeUrl}', 'video')">
+        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${safeUrl}', '${isFile ? 'file' : 'video'}')">
             <!-- Dynamic Thumbnail -->
             ${thumbnailHtml}
 
-            <!-- Play Button Overlay (Ghost Style on Hover for Dynamic, Solid for Regular) -->
+            <!-- Play/View Button Overlay -->
             <div class="absolute inset-0 flex items-center justify-center z-30">
                 <div class="w-16 h-16 rounded-full ${isDynamic ? 'bg-white/0 border-white/0' : 'bg-white/10 backdrop-blur-md border-white/20'} flex items-center justify-center text-white text-2xl group-hover/video:scale-110 group-hover/video:bg-brand-primary/80 group-hover/video:border-brand-primary group-hover/video:backdrop-blur-md transition-all duration-300 shadow-2xl">
-                    <i class="fas fa-play ml-1 ${isDynamic ? 'opacity-0 group-hover/video:opacity-100' : ''}"></i>
+                    <i class="fas ${isFile ? 'fa-eye' : 'fa-play ml-1'} ${isDynamic ? 'opacity-0 group-hover/video:opacity-100' : ''}"></i>
                 </div>
             </div>
             
-            <!-- Metadata Badge (Hidden for Dynamic) -->
-            ${!isDynamic ? `
+            <!-- Metadata Badge -->
+            ${!isDynamic && !isFile ? `
             <div class="absolute top-3 left-3 z-20">
                 <span class="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-md border border-white/10 uppercase tracking-widest leading-none flex items-center gap-1">
                     <i class="fas ${isYouTube ? 'fa-youtube text-red-500' : 'fa-play-circle text-brand-primary'} text-[10px]"></i>
@@ -216,7 +266,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">${item.title}</h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
-                        <button onclick="window.openVideoAnalytics('${item.id}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="View Analytics"><i class="fas fa-eye text-xs"></i></button>
+                        ${!isFile ? `<button onclick="window.openVideoAnalytics('${item.id}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="View Analytics"><i class="fas fa-eye text-xs"></i></button>` : ''}
                         <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
                         <button onclick="window.deleteContent('${item.id}', 'videos')" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash text-xs"></i></button>
                     </div>` : ''}
