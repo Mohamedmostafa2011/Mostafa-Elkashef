@@ -1,8 +1,8 @@
 import { db } from "./config.js";
 import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, deleteDoc, where, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { showToast, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils_v3.js";
-import { openCourseDashboard, renderTab } from "./dashboard_v5.js";
+import { showToast, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils_v5.js";
+import { openCourseDashboard, _renderTabInternal } from "./dashboard_v7.js";
 
 export async function renderAdminHome() {
     withViewTransition(async () => {
@@ -12,9 +12,9 @@ export async function renderAdminHome() {
 
 async function _renderAdminInternal() {
     document.getElementById('nav-links').innerHTML = `
-        <button onclick="window.renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-th-large"></i> Courses</button>
+    <button onclick="window.renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-th-large"></i> Courses</button>
         <button onclick="window.renderApprovals()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-user-check"></i> Approvals</button>
-    `;
+`;
 
     const container = document.getElementById('main-view');
     container.innerHTML = getSkeletonHtml(3);
@@ -24,12 +24,12 @@ async function _renderAdminInternal() {
     snap.forEach(d => state.availableCourses.push({ id: d.id, ...d.data() }));
 
     let html = `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
-            <div onclick="window.openModalForCreate()" class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-[2rem] h-64 flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-blue-50/50 dark:hover:bg-slate-800 transition group">
-                <div class="w-16 h-16 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition"><i class="fas fa-plus text-2xl text-brand-primary"></i></div>
-                <h3 class="font-bold text-slate-500 dark:text-slate-400 group-hover:text-brand-primary">Create New Course</h3>
-            </div>
-    `;
+    < div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in" >
+        <div onclick="window.openModalForCreate()" class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-[2rem] h-64 flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-blue-50/50 dark:hover:bg-slate-800 transition group">
+            <div class="w-16 h-16 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition"><i class="fas fa-plus text-2xl text-brand-primary"></i></div>
+            <h3 class="font-bold text-slate-500 dark:text-slate-400 group-hover:text-brand-primary">Create New Course</h3>
+        </div>
+`;
 
     const icons = ['fa-square-root-variable', 'fa-chart-pie', 'fa-calculator', 'fa-superscript', 'fa-infinity'];
 
@@ -39,7 +39,7 @@ async function _renderAdminInternal() {
         const icon = icons[i % icons.length];
 
         html += `
-            <div class="relative h-64 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition hover:scale-[1.02] text-white p-6 flex flex-col justify-between group" style="background: ${c.theme}">
+    < div class="relative h-64 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition hover:scale-[1.02] text-white p-6 flex flex-col justify-between group" style = "background: ${c.theme}" >
                 <div class="absolute inset-0 bg-math-grid opacity-20"></div>
                 <div class="absolute -right-4 -bottom-8 text-[100px] opacity-10 transform rotate-12"><i class="fas ${icon}"></i></div>
                 
@@ -55,10 +55,10 @@ async function _renderAdminInternal() {
                     <p class="text-sm font-medium opacity-80">Math &bull; IG</p>
                     <div class="w-10 h-10 bg-white text-brand-primary rounded-full flex items-center justify-center shadow-lg group-hover:translate-x-1 transition"><i class="fas fa-arrow-right"></i></div>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
     });
-    html += `</div>`;
+    html += `</div > `;
     container.innerHTML = html;
 }
 
@@ -69,7 +69,7 @@ export async function enterCourseLogic(courseId, subCount) {
         const container = document.getElementById('main-view');
 
         let html = `
-            <button onclick="window.renderAdminHome()" class="mb-6 flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary font-bold transition"><i class="fas fa-arrow-left"></i> Back to Courses</button>
+    < button onclick = "window.renderAdminHome()" class="mb-6 flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary font-bold transition" > <i class="fas fa-arrow-left"></i> Back to Courses</button >
             <h2 class="text-3xl font-display font-bold text-slate-900 dark:text-white mb-2">Select Group</h2>
             <p class="text-slate-500 dark:text-slate-400 mb-8">Managing <b>${course.title}</b></p>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 fade-in">`;
@@ -91,12 +91,12 @@ export async function enterCourseLogic(courseId, subCount) {
 
 export async function renderApprovals() {
     document.getElementById('nav-links').innerHTML = `
-        <button onclick="window.renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm"><i class="fas fa-th-large"></i> Courses</button>
+    < button onclick = "window.renderAdminHome()" class="nav-item w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium text-sm" > <i class="fas fa-th-large"></i> Courses</button >
         <button onclick="window.renderApprovals()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-user-check"></i> Approvals</button>
-    `;
+`;
     if (state.availableCourses.length === 0) { const cSnap = await getDocs(query(collection(db, "courses"))); cSnap.forEach(d => state.availableCourses.push({ id: d.id, ...d.data() })); }
     const snap = await getDocs(query(collection(db, "users"), where("status", "==", "pending")));
-    let html = `<div class="max-w-4xl mx-auto"><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests</h2><div class="space-y-4">`;
+    let html = `< div class="max-w-4xl mx-auto" ><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests</h2><div class="space-y-4">`;
     if (snap.empty) html += `<p class="text-slate-400">No pending requests.</p>`;
     snap.forEach(d => {
         const u = d.data();
@@ -115,7 +115,7 @@ export async function renderApprovals() {
             <button onclick="window.approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-green-100">Approve</button>
         </div>`;
     });
-    html += `</div></div>`;
+    html += `</div></div > `;
     document.getElementById('main-view').innerHTML = html;
 }
 
@@ -196,7 +196,7 @@ export async function handleDeleteCourse() {
 export async function openVideoAnalytics(videoId) {
     document.getElementById('video-analytics-modal').classList.remove('hidden');
     const container = document.getElementById('analytics-content');
-    container.innerHTML = `<div class="flex items-center justify-center h-full"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div></div>`;
+    container.innerHTML = `< div class="flex items-center justify-center h-full" > <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div></div > `;
 
     try {
         // 1. Fetch Video Stats
@@ -270,11 +270,11 @@ export async function openVideoAnalytics(videoId) {
         const formatTime = (seconds) => {
             const m = Math.floor(seconds / 60);
             const s = Math.round(seconds % 60);
-            return `${m}m ${s}s`;
+            return `${m}m ${s} s`;
         };
 
         let html = `
-            <div class="grid grid-cols-2 gap-4 mb-6">
+    < div class="grid grid-cols-2 gap-4 mb-6" >
                 <div class="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
                     <p class="text-xs font-bold text-brand-primary uppercase tracking-widest">Total Viewers</p>
                     <p class="text-2xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
@@ -287,23 +287,23 @@ export async function openVideoAnalytics(videoId) {
                         ${formatTime(avgTime)}
                     </p>
                 </div>
-            </div>
-            
-            <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 mb-6">
-                <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center">
-                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Watched List</h3>
-                    <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${stats.length}</span>
-                </div>
-                <table class="w-full text-sm table-fixed">
-                    <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
-                        <tr>
-                            <th class="px-4 py-3 text-left w-1/2">Student</th>
-                            <th class="px-4 py-3 text-right w-1/4">Time Watched</th>
-                            <th class="px-4 py-3 text-right w-1/4">Last Watched</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto w-full">
-        `;
+            </div >
+
+    <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 mb-6">
+        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Watched List</h3>
+            <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">${stats.length}</span>
+        </div>
+        <table class="w-full text-sm table-fixed">
+            <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                    <th class="px-4 py-3 text-left w-1/2">Student</th>
+                    <th class="px-4 py-3 text-right w-1/4">Time Watched</th>
+                    <th class="px-4 py-3 text-right w-1/4">Last Watched</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto w-full">
+                `;
 
         if (stats.length === 0) {
             html += `<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">No one has watched this video yet.</td></tr>`;
@@ -346,7 +346,7 @@ export async function openVideoAnalytics(videoId) {
 
         // NOT WATCHED SECTION
         html += `
-            <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                    < div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800" >
                  <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="document.getElementById('not-watched-list').classList.toggle('hidden');">
                     <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Not Watched Yet</h3>
                     <div class="flex items-center gap-2">
@@ -369,12 +369,12 @@ export async function openVideoAnalytics(videoId) {
                 `;
             });
         }
-        html += `</div></div>`;
+        html += `</div></div > `;
 
         container.innerHTML = html;
 
     } catch (e) {
         console.error(e);
-        container.innerHTML = `<div class="p-4 text-red-500 text-center">Error loading analytics</div>`;
+        container.innerHTML = `< div class="p-4 text-red-500 text-center" > Error loading analytics</div > `;
     }
 }
