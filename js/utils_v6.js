@@ -116,7 +116,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                         
                         <!-- 3. Main Title (Centered vertically) -->
                         <div class="flex-1 flex items-center justify-center py-4">
-                            <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
+                            <h3 class="text-white text-2xl md:text-4xl font-black leading-tight selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
                                 ${item.title}
                             </h3>
                         </div>
@@ -224,7 +224,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                 
                 <!-- 2. Topic Title (Centered vertically) -->
                 <div class="flex-1 flex items-center justify-center py-4">
-                    <h4 class="text-white text-xl md:text-2xl font-black uppercase tracking-widest drop-shadow-2xl">
+                    <h4 class="text-white text-2xl md:text-4xl font-black uppercase tracking-widest drop-shadow-2xl">
                         ${topicTitle}
                     </h4>
                 </div>
@@ -255,7 +255,7 @@ export function generateVideoCardHtml(item, isAdmin) {
 
                 <!-- 2. Topic Title (Centered vertically) -->
                 <div class="flex-1 flex items-center justify-center py-4">
-                    <h4 class="text-white text-xl md:text-2xl font-black uppercase tracking-widest drop-shadow-2xl">
+                    <h4 class="text-white text-2xl md:text-4xl font-black uppercase tracking-widest drop-shadow-2xl">
                         ${topicTitle}
                     </h4>
                 </div>

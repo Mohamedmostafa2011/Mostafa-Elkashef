@@ -1,7 +1,7 @@
 import { db } from "./config.js";
 import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils_v4.js";
+import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils_v5.js";
 import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage_v4.js";
 
@@ -96,7 +96,7 @@ export function openCourseDashboard(id, title, subcode) {
         <button onclick="window.renderTab('revision')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-undo w-5 text-center"></i> Final Revision</button>
         <button onclick="window.renderTab('papers')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-scroll w-5 text-center"></i> Past Papers</button>
         
-        ${studentsTab}
+        ${studentsTab ? `<div class="my-2 border-t border-slate-100 dark:border-slate-800 mx-4"></div> ${studentsTab}` : ''}
     `;
     renderTab('home');
 }
@@ -116,9 +116,13 @@ async function _renderTabInternal(tabName) {
     if (state.sortableInstance) { state.sortableInstance.destroy(); state.sortableInstance = null; }
 
     document.querySelectorAll('.tab-btn').forEach(b => {
-        b.className = (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabName))
+        const onclick = b.getAttribute('onclick') || '';
+        const match = onclick.match(/'([^']+)'/);
+        const btnTab = match ? match[1] : '';
+
+        b.className = (btnTab === tabName)
             ? "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm mb-1 transition-colors"
-            : "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm mb-1 transition-colors";
+            : "nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-medium text-sm mb-1 transition-colors";
     });
 
     const container = document.getElementById('main-view');
