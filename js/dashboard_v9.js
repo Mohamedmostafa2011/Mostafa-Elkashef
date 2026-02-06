@@ -608,9 +608,12 @@ export function openFileViewer(url, type = 'file') {
     let fileType = type;
     const lowerUrl = url.toLowerCase();
 
-    if (lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/)) fileType = 'image';
-    else if (lowerUrl.match(/\.(mp4|webm|ogg)$/)) fileType = 'video';
-    else if (lowerUrl.match(/\.(pdf)$/)) fileType = 'pdf';
+    // Enhanced detection (handles Hugging Face resolve URLs better)
+    if (lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/)) fileType = 'image';
+    else if (lowerUrl.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/)) fileType = 'video';
+    else if (lowerUrl.match(/\.(pdf)(\?.*)?$/)) fileType = 'pdf';
+    else if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$/)) fileType = 'office';
+    else if (lowerUrl.match(/\.(txt|md|js|css|html|json|csv)(\?.*)?$/)) fileType = 'text';
 
     // Handle YouTube/Video links if not direct file
     if (url.includes('youtube.com') || url.includes('youtu.be')) fileType = 'youtube';
@@ -658,6 +661,18 @@ export function openFileViewer(url, type = 'file') {
     }
     else if (fileType === 'pdf') {
         renderPdfInViewer(url, content);
+    }
+    else if (fileType === 'office') {
+        const encodedUrl = encodeURIComponent(url);
+        content.innerHTML = `<iframe src="https://docs.google.com/gview?url=${encodedUrl}&embedded=true" class="w-full h-full max-w-5xl rounded-xl shadow-2xl bg-white" frameborder="0"></iframe>`;
+    }
+    else if (fileType === 'text') {
+        content.innerHTML = '<div class="text-white text-xl font-bold animate-pulse">Loading Text Content...</div>';
+        fetch(url).then(res => res.text()).then(text => {
+            content.innerHTML = `<div class="w-full h-full max-w-4xl bg-slate-900 text-slate-100 p-8 overflow-auto rounded-xl shadow-2xl font-mono text-sm whitespace-pre-wrap text-left">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+        }).catch(err => {
+            content.innerHTML = `<div class="text-white text-center"><p class="text-red-500 mb-4">Error loading text file</p><p class="text-xs">${err.message}</p></div>`;
+        });
     }
     else {
         // Fallback for unknown types
