@@ -186,8 +186,8 @@ export function generateVideoCardHtml(item, isAdmin) {
         let videoUrl = item.url || "";
         const isFile = item.type === 'file';
 
-        if (attachments.length > 0 && !isFile) {
-            const hero = attachments.find(a => a.type === 'video' || a.url.match(/\.(mp4|webm|ogg)$/i)) || attachments[0];
+        if (attachments.length > 0 && (!videoUrl || !isFile)) {
+            const hero = attachments.find(a => a.type === 'video' || (a.url && a.url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i))) || attachments[0];
             videoUrl = hero.url;
         }
 

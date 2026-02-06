@@ -972,12 +972,15 @@ export async function handleSaveContent() {
                 data.attachments = attachments;
             }
 
+            if (!data.url && data.attachments.length > 0) data.url = data.attachments[0].url;
+
             await updateDoc(ref, data);
             showToast("Content updated successfully");
         } else {
             // Create
             data.createdAt = new Date().toISOString();
             data.attachments = attachments;
+            if (!data.url && attachments.length > 0) data.url = attachments[0].url;
             await addDoc(collection(db, "course_content"), data);
             showToast("Content created successfully");
         }
