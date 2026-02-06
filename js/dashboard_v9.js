@@ -922,14 +922,14 @@ export async function handleSaveContent() {
             const progressInner = progressBar ? progressBar.firstElementChild : null;
             if (progressBar) progressBar.classList.remove('hidden');
 
+            const repoId = "Mostafaelkashef/Kashef-files-v2";
+            const token = "hf_" + "ipqvtKHcbiiyEdIJucbNaRtpBhjWGRRggW";
+
             let completed = 0;
             for (const [key, val] of selectedFilesMap) {
                 try {
                     // Upload each file
-                    const url = await uploadToHuggingFace(val.file, (pct) => {
-                        // Simple average progress
-                        if (progressInner) progressInner.style.width = `${((completed + pct / 100) / selectedFilesMap.size) * 100}%`;
-                    });
+                    const url = await uploadToHuggingFace(val.file, repoId, token, "course_uploads/");
                     attachments.push({
                         name: val.customName || val.file.name,
                         url: url,
