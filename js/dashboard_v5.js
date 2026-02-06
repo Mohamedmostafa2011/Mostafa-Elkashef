@@ -1,7 +1,7 @@
 import { db } from "./config.js";
 import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils.js";
+import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils_v2.js";
 import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage_v4.js";
 
@@ -81,13 +81,21 @@ export function openCourseDashboard(id, title, subcode) {
         `<button onclick="window.renderTab('students')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-users w-5 text-center"></i> Students</button>`
         : '';
 
-    // Updated Navigation: Home, Videos, Files
+    // Updated Navigation: Home + 6 New Sections
     document.getElementById('nav-links').innerHTML = `
         ${backBtn}
         <div class="px-4 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Course Menu</div>
         <button onclick="window.renderTab('home')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-home w-5 text-center"></i> Home</button>
-        <button onclick="window.renderTab('videos')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-video w-5 text-center"></i> Videos</button>
-        <button onclick="window.renderTab('files')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-folder-open w-5 text-center"></i> Files</button>
+        
+        <div class="my-2 border-t border-slate-100 dark:border-slate-800 mx-4"></div>
+        
+        <button onclick="window.renderTab('content')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-book-open w-5 text-center"></i> Content</button>
+        <button onclick="window.renderTab('homework')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-pencil-alt w-5 text-center"></i> Homework</button>
+        <button onclick="window.renderTab('summary')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-list-alt w-5 text-center"></i> Summary</button>
+        <button onclick="window.renderTab('classified')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-layer-group w-5 text-center"></i> Classified</button>
+        <button onclick="window.renderTab('revision')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-undo w-5 text-center"></i> Final Revision</button>
+        <button onclick="window.renderTab('papers')" class="nav-item tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm mb-1"><i class="fas fa-scroll w-5 text-center"></i> Past Papers</button>
+        
         ${studentsTab}
     `;
     renderTab('home');
@@ -243,125 +251,140 @@ async function _renderTabInternal(tabName) {
             return;
         }
 
-        // --- NEW HOME (SHORTCUTS) ---
+        // --- NEW HOME (SHORTCUTS 6 SECTIONS) ---
         if (tabName === 'home') {
-            container.innerHTML = header + `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 fade-in h-[50vh] items-center">
-                    <!-- Videos Shortcut -->
-                    <div onclick="window.renderTab('videos')" class="group relative bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer overflow-hidden h-full flex flex-col justify-center text-center">
-                        <div class="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-slate-800 dark:to-slate-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative z-10">
-                            <div class="w-24 h-24 mx-auto bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500">
-                                <i class="fas fa-video"></i>
-                            </div>
-                            <h2 class="text-4xl font-black text-slate-900 dark:text-white font-display tracking-tight mb-2">Videos</h2>
-                            <p class="text-slate-500 font-medium">Access your lessons and recordings</p>
+            const sections = [
+                { id: 'content', title: 'Content', icon: 'fa-book-open', color: 'blue', desc: 'Course materials & lessons' },
+                { id: 'homework', title: 'Homework', icon: 'fa-pencil-alt', color: 'indigo', desc: 'Assignments & tasks' },
+                { id: 'summary', title: 'Summary', icon: 'fa-list-alt', color: 'emerald', desc: 'Quick reviews & notes' },
+                { id: 'classified', title: 'Classified', icon: 'fa-layer-group', color: 'amber', desc: 'Topic-based questions' },
+                { id: 'revision', title: 'Final Revision', icon: 'fa-undo', color: 'rose', desc: 'Exam prep material' },
+                { id: 'papers', title: 'Past Papers', icon: 'fa-scroll', color: 'slate', desc: 'Previous exams' }
+            ];
+
+            const gridHtml = sections.map(s => `
+                <div onclick="window.renderTab('${s.id}')" class="group relative bg-white dark:bg-slate-800 rounded-[2rem] p-6 border border-slate-100 dark:border-slate-700 shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer overflow-hidden flex flex-col justify-between h-48">
+                    <div class="absolute inset-0 bg-gradient-to-br from-${s.color}-50 to-white dark:from-slate-800 dark:to-slate-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <div class="relative z-10 flex justify-between items-start">
+                        <div class="w-14 h-14 bg-${s.color}-100 dark:bg-${s.color}-900/30 text-${s.color}-600 dark:text-${s.color}-400 rounded-2xl flex items-center justify-center text-2xl shadow-sm group-hover:rotate-6 transition-transform duration-300">
+                            <i class="fas ${s.icon}"></i>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center text-slate-300 group-hover:text-${s.color}-500 transition shadow-sm">
+                            <i class="fas fa-arrow-right text-xs"></i>
                         </div>
                     </div>
 
-                    <!-- Files Shortcut -->
-                    <div onclick="window.renderTab('files')" class="group relative bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer overflow-hidden h-full flex flex-col justify-center text-center">
-                        <div class="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-slate-800 dark:to-slate-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                        <div class="relative z-10">
-                            <div class="w-24 h-24 mx-auto bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center text-5xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-500">
-                                <i class="fas fa-folder-open"></i>
-                            </div>
-                            <h2 class="text-4xl font-black text-slate-900 dark:text-white font-display tracking-tight mb-2">Files</h2>
-                            <p class="text-slate-500 font-medium">Browse documents and resources</p>
-                        </div>
+                    <div class="relative z-10 mt-4">
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-white font-display tracking-tight">${s.title}</h2>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">${s.desc}</p>
                     </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = header + `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in pb-10">
+                    ${gridHtml}
                 </div>
             `;
             return;
         }
 
-        // --- CONTENT TABS (VIDEOS & FILES) ---
-        // typeMap now points: videos -> video, files -> file
-        const typeMap = { 'videos': 'video', 'files': 'file' };
-        const dbType = typeMap[tabName];
+        // --- SECTION CONTENT TABS ---
+        const validSections = ['content', 'homework', 'summary', 'classified', 'revision', 'papers', 'videos', 'files']; // Added legacy for safety
+        if (validSections.includes(tabName)) {
 
-        // Both sections support folders
-        let qTypes = [dbType, 'folder'];
+            // Query: Fetch ALL items for this course
+            // We filter by 'section' client-side or add 'section' to query if indexed
+            // For now, let's query all and filter in JS to avoid index requirements immediately, 
+            // unless list is huge.
+            // BETTER: Query by section if possible. 
+            // Let's assume we will add 'section' field to all new items.
+            // For legacy items (videos/files tabs), we might need migration or fallback.
 
-        const q = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id));
-        const snap = await getDocs(q);
-        let items = [];
+            const q = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id));
+            const snap = await getDocs(q);
+            let items = [];
 
-        snap.forEach(d => {
-            const data = d.data();
-            if (data.subcourseCode && data.subcourseCode !== state.activeCourseContext.subcode) return;
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.subcourseCode && data.subcourseCode !== state.activeCourseContext.subcode) return;
 
-            // Filter by type
-            // Note: If we use generic 'folder' type for both, we need to distinguish them.
-            // Assumption: Folders created in "Files" tab should show in Files, Videos in Videos.
-            // We can add a 'section' field to folders, OR just assume existing 'folder' type belongs to Videos (legacy) 
-            // and maybe introduce 'file_folder' for Files? 
-            // Let's stick to using 'folder' type but maybe filter by 'tab' property if we adding it?
-            // Actually, simplest is to filter based on parentId for nested items. 
-            // But top-level folders need to be distinguished.
-            // Let's assume for now existing folders are for videos.
-            // I will add logic: if type is 'folder' AND tabName is 'files', only show if it has section='files' (if I add that field).
-            // Current data doesn't have 'section'. 
-            // PROPOSAL: Use type 'folder' for videos, and 'file_folder' for files.
+                // --- FILTERING LOGIC ---
+                // If item has 'section', match it.
+                // If item has NO 'section', map legacy types:
+                // 'video' -> 'videos' (legacy tab) -> maybe map to 'content'?
+                // 'file' -> 'files' (legacy tab) -> maybe map to 'content'?
+                // User said "remove videos and files sections but keep the creating...".
+                // This implies old content might be lost or needs to be shown somewhere.
+                // Let's assume OLD content (no section) shows in 'content' tab by default? 
+                // OR we just hide it until migrated.
+                // Safest: strict section match. If new item, it has section. 
 
-            if (tabName === 'files') {
-                if (data.type === 'file' || data.type === 'file_folder') {
-                    // It's a file item
-                } else {
-                    return;
+                let itemSection = data.section;
+
+                // Legacy Fallback (optional, can be removed if we want clean slate)
+                if (!itemSection) {
+                    if (data.type === 'video') itemSection = 'content'; // Map legacy videos to Content?
+                    if (data.type === 'file') itemSection = 'content';  // Map legacy files to Content?
+                    if (data.type === 'folder') itemSection = 'content';
                 }
-            } else if (tabName === 'videos') {
-                if (data.type === 'video' || data.type === 'folder') {
-                    // It's a video item
+
+                if (itemSection !== tabName) return;
+
+                // Folder Navigation Logic
+                if (state.currentFolderId === null) {
+                    if (data.parentId) return;
                 } else {
-                    return;
+                    if (data.parentId !== state.currentFolderId) return;
                 }
-            }
+                items.push({ id: d.id, ...data });
+            });
 
-            // Folder Navigation Logic
-            if (state.currentFolderId === null) {
-                if (data.parentId) return;
-            } else {
-                if (data.parentId !== state.currentFolderId) return;
-            }
-            items.push({ id: d.id, ...data });
-        });
+            // Sort
+            items.sort((a, b) => {
+                const orderA = a.order || 9999;
+                const orderB = b.order || 9999;
+                if (orderA !== orderB) return orderA - orderB;
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
 
-        // Sort
-        items.sort((a, b) => {
-            const orderA = a.order || 9999;
-            const orderB = b.order || 9999;
-            if (orderA !== orderB) return orderA - orderB;
-            return new Date(b.createdAt) - new Date(a.createdAt);
-        });
+            state.currentItems = items;
 
-        state.currentItems = items;
-
-        if (tabName === 'videos' || tabName === 'files') {
             let breadcrumbHtml = '';
             if (state.currentFolderId) {
-                breadcrumbHtml = `<div class="flex items-center gap-2 mb-4 text-sm font-bold text-slate-500 fade-in px-1">
-                    <span onclick="window.navigateToFolder(null)" class="cursor-pointer hover:text-brand-primary transition">Home</span>
+                breadcrumbHtml = `<div class="flex items-center gap-2 mb-6 text-sm font-bold text-slate-500 fade-in px-1">
+                    <span onclick="window.navigateToFolder(null)" class="cursor-pointer hover:text-brand-primary transition flex items-center gap-1"><i class="fas fa-level-up-alt"></i> Back to Root</span>
                     ${state.breadcrumbs.map((b, i) => `
                         <i class="fas fa-chevron-right text-[10px] opacity-30"></i>
-                        <span onclick="window.navigateToFolder('${b.id}', ${i})" class="cursor-pointer hover:text-brand-primary transition font-display">${b.title}</span>
+                        <span class="opacity-50">${b.title}</span>
                     `).join('')}
                 </div>`;
             }
 
             const grid = items.map(item => generateVideoCardHtml(item, isAdmin)).join('');
 
-            // Define icons and titles based on tab
-            const sectionTitle = state.currentFolderId ? 'Folder Contents' : (tabName === 'videos' ? 'Video Library' : 'File Repository');
-            const emptyIcon = tabName === 'videos' ? 'fa-video-slash' : 'fa-folder-open';
-            const emptyText = tabName === 'videos' ? 'No videos found.' : 'No files found.';
-            const createFolderType = tabName === 'videos' ? 'folder' : 'file_folder';
-            const createItemType = tabName === 'videos' ? 'video' : 'file';
+            const sectionConfig = {
+                'content': { title: 'Way to Content', icon: 'fa-book-open' },
+                'homework': { title: 'Homework Assignments', icon: 'fa-pencil-alt' },
+                'summary': { title: 'Summaries', icon: 'fa-list-alt' },
+                'classified': { title: 'Classified Questions', icon: 'fa-layer-group' },
+                'revision': { title: 'Final Revision', icon: 'fa-undo' },
+                'papers': { title: 'Past Papers', icon: 'fa-scroll' },
+                'videos': { title: 'Videos (Legacy)', icon: 'fa-video' },
+                'files': { title: 'Files (Legacy)', icon: 'fa-folder' }
+            };
+
+            const conf = sectionConfig[tabName] || { title: 'Section', icon: 'fa-folder' };
+            const sectionTitle = state.currentFolderId ? 'Folder Contents' : conf.title;
 
             contentHtml = `
                 ${breadcrumbHtml}
-                <div class="flex flex-col md:flex-row justify-between items-center mb-8 fade-in gap-4">
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">${sectionTitle}</h2>
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 fade-in gap-4 bg-transparent py-2">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display flex items-center gap-3">
+                        ${!state.currentFolderId ? `<div class="w-10 h-10 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center text-lg"><i class="fas ${conf.icon}"></i></div>` : ''}
+                        ${sectionTitle}
+                    </h2>
                     
                     <div class="flex gap-2 w-full md:w-auto items-center">
                         <div class="relative flex-1 md:w-64">
@@ -371,21 +394,27 @@ async function _renderTabInternal(tabName) {
                     
                         ${isAdmin ? `
                         <div class="flex gap-2 shrink-0">
-                            <button onclick="window.openContentModal('${createFolderType}')" class="h-10 w-10 flex items-center justify-center bg-yellow-50 text-yellow-600 rounded-xl font-bold hover:bg-yellow-100 transition" title="New Folder"><i class="fas fa-folder-plus"></i></button>
-                            <button onclick="window.openContentModal('${createItemType}')" class="h-10 w-10 flex items-center justify-center bg-brand-primary text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-600 transition" title="Add Item"><i class="fas fa-plus"></i></button>
+                            <!-- New Folder -->
+                            <button onclick="window.openContentModal('folder', '${tabName}')" class="h-10 w-10 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl font-bold hover:bg-amber-100 transition border border-amber-100" title="New Folder"><i class="fas fa-folder-plus"></i></button>
+                            
+                            <!-- New Video -->
+                            <button onclick="window.openContentModal('video', '${tabName}')" class="h-10 w-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition border border-blue-100" title="Add Video"><i class="fas fa-video"></i></button>
+                            
+                            <!-- New File -->
+                            <button onclick="window.openContentModal('file', '${tabName}')" class="h-10 w-10 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl font-bold hover:bg-emerald-100 transition border border-emerald-100" title="Add File"><i class="fas fa-file-upload"></i></button>
                         </div>` : ''}
                     </div>
                 </div>
-                ${items.length ? `<div id="video-sortable-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in px-0.5">${grid}</div>` :
-                    `<div class="bg-white dark:bg-slate-800 rounded-[2rem] p-16 text-center border border-slate-100 dark:border-slate-700 shadow-sm"><div class="inline-block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-full text-slate-300 mb-4 animate-bounce"><i class="fas ${emptyIcon} text-3xl"></i></div><p class="text-slate-500 font-bold">${emptyText}</p></div>`}
+                
+                ${items.length ? `<div id="video-sortable-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 fade-in px-0.5 pb-20">${grid}</div>` :
+                    `<div class="bg-white dark:bg-slate-800 rounded-[2rem] p-16 text-center border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center opacity-60">
+                        <div class="w-20 h-20 bg-slate-50 dark:bg-slate-700/50 rounded-full flex items-center justify-center text-slate-300 mb-4 text-3xl"><i class="fas fa-wind"></i></div>
+                        <p class="text-slate-500 font-bold">This section is empty.</p>
+                    </div>`}
             `;
-        }
-
-        container.innerHTML = header + contentHtml;
-
-        // --- INITIALIZE SORTABLE ---
-        if ((tabName === 'videos' || tabName === 'files') && isAdmin && items.length > 0) {
-            initSortable();
+            container.innerHTML = header + contentHtml;
+            if (isAdmin && items.length > 0) initSortable();
+            return;
         }
 
     } catch (e) {
@@ -397,7 +426,7 @@ async function _renderTabInternal(tabName) {
 
 export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromHistory = false) {
     if (!fromHistory) {
-        const currentTab = state.activeTab || 'videos';
+        const currentTab = state.activeTab || 'content';
         history.pushState({ tab: currentTab, folderId: id, folderTitle: title }, "", `#${currentTab}${id ? '/' + id : ''}`);
     }
 
@@ -425,7 +454,7 @@ export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromH
                 }
             }
         }
-        _renderTabInternal(state.activeTab || 'videos');
+        _renderTabInternal(state.activeTab || 'content');
     });
 }
 
@@ -647,14 +676,10 @@ export function openFileViewer(url, type = 'file') {
 
     // --- ANALYTICS TRACKING START ---
     if (state.currentUserData.role !== 'admin') {
-        const videoId = typeof url === 'string' ? (url.includes('id=') ? url : url) : 'unknown_video'; // Simple ID derivation or pass explicit ID
-        // Note: url might be a long string. ideally we pass the item.id to openFileViewer. 
-        // But openFileViewer currently only takes url. 
-        // We will improve this by checking if we can derive ID or pass it.
-        // For now, let's look at how openFileViewer is called. 
-        // It's called with item.url. 
-        // We might need to change the signature of openFileViewer or look up the item.
-        startVideoTracking(url);
+        // Only track for VIDEO types
+        if (fileType === 'video' || fileType === 'youtube') {
+            startVideoTracking(url);
+        }
     }
 }
 
@@ -740,8 +765,20 @@ async function updateVideoProgress(url, secondsWatched, currentPos, duration, is
 }
 
 
-export function openContentModal(type) {
+export function openContentModal(type, section = null) {
     document.getElementById('content-type').value = type;
+    // We reuse content-topic-no field to temporarily store the 'section' if needed, OR we can add a hidden field.
+    // Let's add a hidden field for section.
+    let sectionInput = document.getElementById('content-section');
+    if (!sectionInput) {
+        // Create if doesn't exist (hacky but works if we don't want to edit HTML)
+        sectionInput = document.createElement('input');
+        sectionInput.type = 'hidden';
+        sectionInput.id = 'content-section';
+        document.getElementById('content-modal').querySelector('div.p-6').appendChild(sectionInput);
+    }
+    sectionInput.value = section || state.activeTab || 'content'; // Default to active tab
+
     document.getElementById('content-edit-id').value = "";
     document.getElementById('content-title').value = "";
     document.getElementById('content-body').value = "";
@@ -761,196 +798,194 @@ export function openContentModal(type) {
 
     body.classList.remove('hidden');
     link.classList.add('hidden');
-    fileSection.classList.add('hidden');
-    fileInput.value = ""; // Reset file
-    const fileLabel = document.getElementById('file-label');
-    if (fileLabel) {
-        fileLabel.innerText = "Click or drag files here";
-        fileLabel.className = "text-xs font-bold";
-    }
-    document.getElementById('file-list-container').classList.add('hidden');
-    document.getElementById('file-list-container').innerHTML = "";
-    selectedFilesMap.clear(); // Clear state
-    uploadProgress.classList.add('hidden');
 
-    const topicFields = document.getElementById('topic-fields');
+    const topicFields = document.getElementById('content-topic-no')?.parentElement?.parentElement;
     if (topicFields) topicFields.classList.add('hidden');
 
-    if (type === 'announcement') {
-        titleEl.innerText = "New Announcement";
-        labelEl.innerText = "Message";
-        fileSection.classList.remove('hidden');
+    // Reset validations
+    fileSection.classList.remove('hidden', 'border-red-500');
+    if (uploadProgress) {
+        uploadProgress.classList.add('hidden');
+        uploadProgress.style.width = '0%';
     }
-    else if (type === 'video') {
-        titleEl.innerText = "Add Video";
-        labelEl.innerText = "YouTube/Drive URL (Or Upload File)";
-        body.classList.add('hidden');
-        link.classList.remove('hidden');
-        fileSection.classList.remove('hidden');
+    if (fileInput) fileInput.value = '';
+    selectedFilesMap.clear();
+    renderFileList();
+
+    if (type === 'video') {
+        titleEl.innerText = "Add New Video";
+        labelEl.innerText = "Video Description (Optional)";
+        link.classList.remove('hidden'); // Show URL input
+
+        // Videos can have topic info for thumbnails
         if (topicFields) topicFields.classList.remove('hidden');
+
+        // Ensure Topic Title is VISIBLE for Videos (restoring if hidden by folder logic)
+        const topicTitleInput = document.getElementById('content-topic-title');
+        if (topicTitleInput && topicTitleInput.parentElement) {
+            topicTitleInput.parentElement.classList.remove('hidden');
+        }
+
+        // HIDE Description for Video as requested
+        body.classList.add('hidden');
+        labelEl.classList.add('hidden');
     }
-    else if (type === 'folder' || type === 'file_folder') {
+    else if (type === 'file') {
+        titleEl.innerText = "Add File";
+        labelEl.innerText = "Upload File or Enter URL";
+        body.classList.add('hidden'); // No body text for files, usually
+        link.classList.remove('hidden'); // SHOW URL INPUT FOR FILES
+        fileSection.classList.remove('hidden');
+        if (topicFields) topicFields.classList.remove('hidden'); // Enable "Old Thumbnail" fields
+
+        // Ensure Topic Title is VISIBLE for Files
+        const topicTitleInput = document.getElementById('content-topic-title');
+        if (topicTitleInput && topicTitleInput.parentElement) {
+            topicTitleInput.parentElement.classList.remove('hidden');
+        }
+    }
+    else if (type === 'folder') {
         titleEl.innerText = "Create New Folder";
-        labelEl.innerText = "Description (Optional)";
-        body.classList.remove('hidden');
+        labelEl.innerText = "Description (Hidden)";
+        body.classList.add('hidden'); // HIDE description as requested
         link.classList.add('hidden');
-    }
-    else if (type === 'summary' || type === 'file') {
-        titleEl.innerText = type === 'file' ? "Add File" : "Add Summary";
-        labelEl.innerText = "URL (Or Upload File)";
-        body.classList.add('hidden');
-        link.classList.remove('hidden');
-        fileSection.classList.remove('hidden');
+
+        // Enable "Old Thumbnail" fields for Folders too
         if (topicFields) topicFields.classList.remove('hidden');
+
+        // V8: HIDE Topic Title Input for Folders (keep Index)
+        // Access specific input parent and hide it
+        const topicTitleInput = document.getElementById('content-topic-title');
+        if (topicTitleInput && topicTitleInput.parentElement) {
+            topicTitleInput.parentElement.classList.add('hidden');
+        }
+
+        // REMOVED Cover Image Upload as per user request
+        fileSection.classList.add('hidden');
     }
-    else if (type === 'homework') { titleEl.innerText = "Assign Homework"; labelEl.innerText = "Instructions"; link.classList.remove('hidden'); link.placeholder = "Optional Link (e.g. Worksheet URL)"; }
 
     toggleContentModal();
 }
 
-export function openEditContentModal(itemStr) {
-    const item = JSON.parse(decodeURIComponent(itemStr));
-    openContentModal(item.type);
-    document.getElementById('content-modal-title').innerText = "Edit Content";
+export function openEditContentModal(itemJson) {
+    const item = JSON.parse(decodeURIComponent(itemJson));
+    openContentModal(item.type, item.section); // Open generic modal first to reset/set types
+
+    // OVERRIDE fields
+    document.getElementById('content-modal-title').innerText = "Edit " + (item.type === 'folder' ? "Folder" : "Content");
     document.getElementById('content-edit-id').value = item.id;
     document.getElementById('content-title').value = item.title;
-    document.getElementById('content-body').value = item.content || "";
+    document.getElementById('content-body').value = item.body || "";
     document.getElementById('content-link').value = item.url || "";
     document.getElementById('content-topic-no').value = item.topicNo || "";
     document.getElementById('content-topic-title').value = item.topicTitle || "";
     document.getElementById('content-order').value = item.order || 1;
+
+    // Handle existing files if any (visual only, we don't repopulate file input)
+    if (item.attachments && item.attachments.length > 0) {
+        document.getElementById('file-label').innerText = `${item.attachments.length} existing files (uploading new will append)`;
+    }
 }
 
 export async function handleSaveContent() {
     const type = document.getElementById('content-type').value;
     const editId = document.getElementById('content-edit-id').value;
     const title = document.getElementById('content-title').value;
-    const body = document.getElementById('content-body').value;
-    const url = document.getElementById('content-link').value;
-    const topicNo = document.getElementById('content-topic-no').value;
-    const topicTitle = document.getElementById('content-topic-title').value;
-    const fileInput = document.getElementById('content-file');
-    const order = parseInt(document.getElementById('content-order').value) || 1;
+    const section = document.getElementById('content-section')?.value || state.activeTab;
 
-    let finalUrl = url;
+    if (!title) return showToast("Title is required", "error");
 
-    let attachments = [];
-
-    // Handle File Upload (Batch)
-    if (selectedFilesMap.size > 0) {
-        // Hardcoded credentials
-        const repoId = "Mostafaelkashef/Kashef-files-v2";
-        const token = "hf_" + "ipqvtKHcbiiyEdIJucbNaRtpBhjWGRRggW";
-
-        const progressDiv = document.getElementById('upload-progress');
-        const progressBar = progressDiv.querySelector('.bg-brand-primary');
-        const progressText = progressDiv.querySelector('p');
-
-        progressDiv.classList.remove('hidden');
-        progressBar.style.width = '10%';
-        progressText.innerText = `Starting upload of ${selectedFilesMap.size} files...`;
-
-        try {
-            const uploadPromises = Array.from(selectedFilesMap.values()).map(async (item, index) => {
-                const total = selectedFilesMap.size;
-                const uploadedUrl = await uploadToHuggingFace(item.file, repoId, token, "course_uploads/");
-
-                // Update progress roughly
-                const percent = Math.round(((index + 1) / total) * 100);
-                progressBar.style.width = `${percent}%`;
-
-                return {
-                    name: item.customName || item.file.name,
-                    url: uploadedUrl,
-                    type: item.file.type.startsWith('video') ? 'video' : 'file'
-                };
-            });
-
-            attachments = await Promise.all(uploadPromises);
-
-            // For backward compatibility, set main URL to first attachment if exists
-            if (attachments.length > 0) {
-                finalUrl = attachments[0].url;
-            }
-
-            progressText.innerText = "All Uploads Complete!";
-        } catch (err) {
-            console.error(err);
-            progressDiv.classList.add('hidden');
-            return showToast("Upload Failed: " + err.message, "error");
-        }
-    }
-
-
-
-    if (!title) return showToast("Title required", "error");
-    if ((type === 'video' || type === 'summary' || type === 'file') && !finalUrl) return showToast("URL or File required", "error");
+    const btn = document.getElementById('save-content-btn');
+    const originalText = btn.innerText;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
 
     try {
         const data = {
+            title,
+            body: document.getElementById('content-body').value,
+            url: document.getElementById('content-link').value,
+            type,
+            section, // Save the section!
+            order: parseInt(document.getElementById('content-order').value) || 9999,
             courseId: state.activeCourseContext.id,
             subcourseCode: state.activeCourseContext.subcode || null,
-            type, title, content: body, url: finalUrl, order,
-            attachments: attachments, // New Field
             parentId: state.currentFolderId,
-            authorId: state.currentUserData.uid
+            topicNo: document.getElementById('content-topic-no').value,
+            topicTitle: document.getElementById('content-topic-title').value,
+            updatedAt: new Date().toISOString()
         };
+
+        // 1. Upload Files
+        const attachments = [];
+        if (selectedFilesMap.size > 0) {
+            const progressBar = document.getElementById('upload-progress');
+            const progressInner = progressBar ? progressBar.firstElementChild : null;
+            if (progressBar) progressBar.classList.remove('hidden');
+
+            let completed = 0;
+            for (const [key, val] of selectedFilesMap) {
+                try {
+                    // Upload each file
+                    const url = await uploadToHuggingFace(val.file, (pct) => {
+                        // Simple average progress
+                        if (progressInner) progressInner.style.width = `${((completed + pct / 100) / selectedFilesMap.size) * 100}%`;
+                    });
+                    attachments.push({
+                        name: val.customName || val.file.name,
+                        url: url,
+                        type: val.file.type.startsWith('image') ? 'image' : (val.file.type.startsWith('video') ? 'video' : 'file')
+                    });
+                    completed++;
+                } catch (err) {
+                    console.error("Upload failed for " + key, err);
+                    showToast(`Failed to upload ${key}`, "error");
+                }
+            }
+        }
 
         if (editId) {
-            await updateDoc(doc(db, "course_content", editId), {
-                title, content: body, url: finalUrl, order,
-                topicNo, topicTitle
-            });
-            showToast("Updated successfully");
+            // Update
+            const ref = doc(db, "course_content", editId);
+            // Fetch existing to append attachments
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                const existing = snap.data().attachments || [];
+                data.attachments = [...existing, ...attachments];
+            } else {
+                data.attachments = attachments;
+            }
+
+            await updateDoc(ref, data);
+            showToast("Content updated successfully");
         } else {
+            // Create
             data.createdAt = new Date().toISOString();
-            data.topicNo = topicNo;
-            data.topicTitle = topicTitle;
+            data.attachments = attachments;
             await addDoc(collection(db, "course_content"), data);
-            showToast("Created successfully");
+            showToast("Content created successfully");
         }
+
         toggleContentModal();
-        const tabMap = {
-            'announcement': 'home',
-            'video': 'videos', 'folder': 'videos',
-            'file': 'files', 'file_folder': 'files',
-            'summary': 'summaries', 'homework': 'hw'
-        };
-        const nextTab = tabMap[type] || 'home';
+        if (state.activeTab) _renderTabInternal(state.activeTab); // Refresh
 
-        // If we are in Files tab and created a file/folder, we want to stay in Files tab.
-        // If we created a file_folder, navigating to 'files' tab is correct.
-        // But if we are inside a folder, renderTab('files') resets to root unless we handle it?
-        // _renderTabInternal shouldn't reset foldering if state.currentFolderId is set.
-        // renderTab without args pushes current state? No. 
-        // We should just re-render current tab.
-
-        renderTab(nextTab);
-    } catch (e) { console.error(e); showToast("Error saving content", "error"); }
-}
-
-export async function deleteContent(id, currentTab) {
-    if (!confirm("Delete this item? If it's a folder, contents might be hidden.")) return;
-    try { await deleteDoc(doc(db, "course_content", id)); showToast("Deleted"); renderTab(currentTab); } catch (e) { showToast("Error deleting", "error"); }
-}
-
-// Global Assignments for HTML Event Handlers
-window.renderTab = renderTab;
-window.handleHeaderProfileClick = () => {
-    if (state.currentUserData?.role !== 'admin') {
-        window.renderTab('profile');
+    } catch (e) {
+        console.error(e);
+        showToast("Error saving content: " + e.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
-};
-window.openCourseDashboard = openCourseDashboard;
-window.navigateToFolder = navigateToFolder;
-window.filterVideoItems = filterVideoItems;
-window.toggleContentModal = toggleContentModal;
-window.openContentModal = openContentModal;
-window.openEditContentModal = openEditContentModal;
-window.handleSaveContent = handleSaveContent;
-window.deleteContent = deleteContent;
-window.toggleSettingsModal = toggleSettingsModal;
-window.saveSettings = saveSettings;
-window.openFileViewer = openFileViewer;
-window.closeFileViewer = closeFileViewer;
-window._closeViewerInternal = _closeViewerInternal;
+}
+
+export async function deleteContent(id, section) {
+    if (!confirm("Delete this item? This cannot be undone.")) return;
+    try {
+        await deleteDoc(doc(db, "course_content", id));
+        showToast("Item deleted");
+        _renderTabInternal(state.activeTab || 'content');
+    } catch (e) {
+        console.error(e);
+        showToast("Error deleting item", "error");
+    }
+}

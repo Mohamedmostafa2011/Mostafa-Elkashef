@@ -90,15 +90,14 @@ export function generateVideoCardHtml(item, isAdmin) {
 
         // Check for Thumbnail Data
         const topicNo = item.topicNo;
-        const topicTitle = item.topicTitle;
-        const hasThumbnail = (topicNo && topicTitle) || (item.attachments && item.attachments.length > 0);
+        const hasThumbnail = topicNo || (item.attachments && item.attachments.length > 0);
 
         let folderThumbnailHtml = '';
 
         if (hasThumbnail) {
             // USE "OLD THUMBNAIL" DESIGN (Text Based)
             // COLOR: YELLOW for Folder
-            if (topicNo && topicTitle) {
+            if (topicNo) {
                 folderThumbnailHtml = `
                     <div class="absolute inset-0 bg-slate-900 overflow-hidden flex flex-col justify-center items-center text-center p-6">
                         <!-- Background Geometric Accent: Amber/Yellow -->
@@ -115,12 +114,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                             </div>
                         </div>
                         
-                         <!-- 2. Topic Title -->
-                        <h4 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
-                            ${topicTitle}
-                        </h4>
-        
-                        <!-- 3. Main Title -->
+                        <!-- 3. Main Title (Restored inside thumbnail) -->
                         <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
                             ${item.title}
                         </h3>
@@ -231,10 +225,10 @@ export function generateVideoCardHtml(item, isAdmin) {
                     ${topicTitle}
                 </h4>
 
-                <!-- 3. Main Title -->
-                <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl px-2">
+                <!-- 3. Main Title (REMOVED) -->
+                <!-- <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl px-2">
                     ${item.title}
-                </h3>
+                </h3> -->
 
                 <!-- Branding Footer -->
                 <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
@@ -265,10 +259,10 @@ export function generateVideoCardHtml(item, isAdmin) {
                     ${topicTitle}
                 </h4>
 
-                <!-- 3. Main Title -->
-                <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
+                <!-- 3. Main Title (REMOVED) -->
+                <!-- <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
                     ${item.title}
-                </h3>
+                </h3> -->
 
                 <!-- Branding Footer -->
                 <div class="mt-2 flex flex-col items-center gap-2">
@@ -359,7 +353,9 @@ export function generateVideoCardHtml(item, isAdmin) {
             ${contentDisplay}
             <div class="p-5">
                 <div class="flex justify-between items-start gap-3">
-                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">${item.title}</h4>
+                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">
+                        ${item.title}
+                    </h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
                         ${!isFile ? `<button onclick="window.openVideoAnalytics('${item.id}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="View Analytics"><i class="fas fa-eye text-xs"></i></button>` : ''}

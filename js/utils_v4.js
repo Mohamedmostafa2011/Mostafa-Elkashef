@@ -90,15 +90,14 @@ export function generateVideoCardHtml(item, isAdmin) {
 
         // Check for Thumbnail Data
         const topicNo = item.topicNo;
-        const topicTitle = item.topicTitle;
-        const hasThumbnail = (topicNo && topicTitle) || (item.attachments && item.attachments.length > 0);
+        const hasThumbnail = topicNo || (item.attachments && item.attachments.length > 0);
 
         let folderThumbnailHtml = '';
 
         if (hasThumbnail) {
             // USE "OLD THUMBNAIL" DESIGN (Text Based)
             // COLOR: YELLOW for Folder
-            if (topicNo && topicTitle) {
+            if (topicNo) {
                 folderThumbnailHtml = `
                     <div class="absolute inset-0 bg-slate-900 overflow-hidden flex flex-col justify-center items-center text-center p-6">
                         <!-- Background Geometric Accent: Amber/Yellow -->
@@ -109,21 +108,18 @@ export function generateVideoCardHtml(item, isAdmin) {
                         <div class="absolute inset-0 opacity-[0.05] pointer-events-none" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
         
                         <!-- 1. Topic/Folder Badge (Index) -->
-                        <div class="mb-3 relative">
+                        <div class="relative">
                             <div class="bg-gradient-to-r from-amber-500 to-yellow-500 px-5 py-1.5 rounded-xl text-[11px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-amber-500/20 border border-white/20 backdrop-blur-md flex items-center gap-2">
                                 <i class="fas fa-folder-open"></i> ${topicNo}
                             </div>
                         </div>
                         
-                         <!-- 2. Topic Title -->
-                        <h4 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
-                            ${topicTitle}
-                        </h4>
-        
-                        <!-- 3. Main Title -->
-                        <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
-                            ${item.title}
-                        </h3>
+                        <!-- 3. Main Title (Centered vertically) -->
+                        <div class="flex-1 flex items-center justify-center py-4">
+                            <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
+                                ${item.title}
+                            </h3>
+                        </div>
         
                         <!-- Branding Footer -->
                         <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
@@ -220,21 +216,18 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <div class="absolute inset-0 opacity-[0.05] pointer-events-none" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
 
                 <!-- 1. Topic Index (Badge) -->
-                <div class="mb-3 relative">
+                <div class="relative">
                     <div class="bg-gradient-to-r from-emerald-500 to-green-500 px-5 py-1.5 rounded-xl text-[11px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 border border-white/20 backdrop-blur-md flex items-center gap-2">
                         <i class="fas fa-file-alt"></i> ${topicNo}
                     </div>
                 </div>
-
-                <!-- 2. Topic Title -->
-                <h4 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
-                    ${topicTitle}
-                </h4>
-
-                <!-- 3. Main Title -->
-                <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl px-2">
-                    ${item.title}
-                </h3>
+                
+                <!-- 2. Topic Title (Centered vertically) -->
+                <div class="flex-1 flex items-center justify-center py-4">
+                    <h4 class="text-white text-xl md:text-2xl font-black uppercase tracking-widest drop-shadow-2xl">
+                        ${topicTitle}
+                    </h4>
+                </div>
 
                 <!-- Branding Footer -->
                 <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
@@ -254,24 +247,21 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
 
                 <!-- 1. Topic Badge -->
-                <div class="mb-3 relative">
+                <div class="relative">
                     <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-1.5 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 border border-white/20 backdrop-blur-md">
                         ${topicNo}
                     </div>
                 </div>
 
-                <!-- 2. Topic Title -->
-                 <h4 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
-                    ${topicTitle}
-                </h4>
-
-                <!-- 3. Main Title -->
-                <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
-                    ${item.title}
-                </h3>
+                <!-- 2. Topic Title (Centered vertically) -->
+                <div class="flex-1 flex items-center justify-center py-4">
+                    <h4 class="text-white text-xl md:text-2xl font-black uppercase tracking-widest drop-shadow-2xl">
+                        ${topicTitle}
+                    </h4>
+                </div>
 
                 <!-- Branding Footer -->
-                <div class="mt-2 flex flex-col items-center gap-2">
+                <div class="mt-auto flex flex-col items-center gap-2">
                     <div class="h-0.5 w-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
                     <span class="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] font-display">Video</span>
                 </div>
@@ -359,7 +349,9 @@ export function generateVideoCardHtml(item, isAdmin) {
             ${contentDisplay}
             <div class="p-5">
                 <div class="flex justify-between items-start gap-3">
-                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">${item.title}</h4>
+                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">
+                        ${item.title}
+                    </h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
                         ${!isFile ? `<button onclick="window.openVideoAnalytics('${item.id}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="View Analytics"><i class="fas fa-eye text-xs"></i></button>` : ''}

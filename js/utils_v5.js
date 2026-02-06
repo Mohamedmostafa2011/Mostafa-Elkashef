@@ -222,7 +222,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <!-- 1. Topic Index (Badge) -->
                 <div class="mb-3 relative">
                     <div class="bg-gradient-to-r from-emerald-500 to-green-500 px-5 py-1.5 rounded-xl text-[11px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 border border-white/20 backdrop-blur-md flex items-center gap-2">
-                        <i class="fas fa-file-alt"></i> ${topicNo}
+                         Topic ${topicNo}
                     </div>
                 </div>
 
@@ -235,12 +235,6 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl px-2">
                     ${item.title}
                 </h3>
-
-                <!-- Branding Footer -->
-                <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
-                    <div class="h-0.5 w-8 bg-white/30 rounded-full"></div>
-                    <span class="text-[9px] text-white font-bold uppercase tracking-[0.3em]">File</span>
-                </div>
             </div>`;
             } else {
                 // VIDEO DESIGN (Blue/Purple Theme)
@@ -256,12 +250,12 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <!-- 1. Topic Badge -->
                 <div class="mb-3 relative">
                     <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-1.5 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 border border-white/20 backdrop-blur-md">
-                        ${topicNo}
+                        Topic ${topicNo}
                     </div>
                 </div>
 
                 <!-- 2. Topic Title -->
-                 <h4 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
+                <h4 class="text-white/70 text-sm font-bold uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
                     ${topicTitle}
                 </h4>
 
@@ -269,12 +263,6 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
                     ${item.title}
                 </h3>
-
-                <!-- Branding Footer -->
-                <div class="mt-2 flex flex-col items-center gap-2">
-                    <div class="h-0.5 w-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                    <span class="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] font-display">Video</span>
-                </div>
             </div>`;
             }
         } else if (isYouTube) {

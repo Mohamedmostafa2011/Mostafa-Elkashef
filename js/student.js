@@ -1,7 +1,7 @@
 import { db } from "./config.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { openCourseDashboard } from "./dashboard_v2.js";
+import { openCourseDashboard } from "./dashboard_v3.js";
 
 export async function renderStudentDashboard() {
     if (!state.currentUserData.courseId) return;

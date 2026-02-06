@@ -60,7 +60,7 @@
     </style>
 </head>
 
-<body class="bg-surface text-slate-800 h-screen overflow-hidden selection:bg-brand-primary selection:text-white">
+<body class="bg-surface text-slate-800 h-screen-safe overflow-hidden selection:bg-brand-primary selection:text-white">
 
     <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
@@ -184,7 +184,7 @@
     </div>
 
     <!-- ================= APP SCREEN ================= -->
-    <div id="app-screen" class="hidden flex h-screen w-full relative">
+    <div id="app-screen" class="hidden flex h-screen-safe w-full relative">
         <!-- Sidebar -->
         <aside id="sidebar"
             class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 flex flex-col shadow-2xl md:shadow-none">
@@ -248,7 +248,7 @@
                     </div>
                 </div>
             </header>
-            <div id="main-view" class="flex-1 overflow-y-auto p-6 md:p-10"></div>
+            <div id="main-view" class="flex-1 overflow-y-auto p-6 md:p-10 pb-32"></div>
         </main>
         <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
     </div>
@@ -317,17 +317,7 @@
                 <input type="hidden" id="content-type">
                 <input type="hidden" id="content-edit-id">
 
-                <div class="flex gap-4">
-                    <div class="flex-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
-                        <input type="text" id="content-title"
-                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
-                            placeholder="e.g. Session 1">
-                    </div>
-                    <input type="hidden" id="content-order" value="1">
-                </div>
-
-                <!-- Topic Designer Fields -->
+                <!-- Topic Designer Fields (MOVED UP) -->
                 <div id="topic-fields" class="grid grid-cols-1 sm:grid-cols-3 gap-4 hidden">
                     <div class="sm:col-span-1">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Topic Index</label>
@@ -341,6 +331,16 @@
                             class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition"
                             placeholder="Math Foundations">
                     </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
+                        <input type="text" id="content-title"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
+                            placeholder="e.g. Session 1">
+                    </div>
+                    <input type="hidden" id="content-order" value="1">
                 </div>
 
                 <!-- File Upload Area -->
@@ -382,7 +382,7 @@
                         placeholder="https://...">
                 </div>
 
-                <button onclick="handleSaveContent()"
+                <button onclick="handleSaveContent()" id="save-content-btn"
                     class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
                     Save / Post
                 </button>
@@ -443,7 +443,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 
     <!-- Main Application Logic -->
-    <script type="module" src="js/main.js?v=cachebust"></script>
+    <script type="module" src="js/main.js?v=cachebust_v12"></script>
 
 </body>
 

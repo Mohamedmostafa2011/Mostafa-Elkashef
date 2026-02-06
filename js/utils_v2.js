@@ -120,10 +120,10 @@ export function generateVideoCardHtml(item, isAdmin) {
                             ${topicTitle}
                         </h4>
         
-                        <!-- 3. Main Title -->
-                        <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
+                        <!-- 3. Main Title (REMOVED) -->
+                        <!-- <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
                             ${item.title}
-                        </h3>
+                        </h3> -->
         
                         <!-- Branding Footer -->
                         <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
@@ -163,7 +163,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <div class="absolute top-[-8px] left-[-8px] w-20 h-20 bg-white/5 rounded-2xl border border-white/10 transform rotate-[-6deg] group-hover:rotate-[-12deg] transition-all duration-300"></div>
                 </div>
                 
-                <h4 class="text-xl font-bold text-white text-center leading-tight line-clamp-2 drop-shadow-lg group-hover:text-amber-200 transition-colors">${item.title}</h4>
+                <!-- <h4 class="text-xl font-bold text-white text-center leading-tight line-clamp-2 drop-shadow-lg group-hover:text-amber-200 transition-colors">${item.title}</h4> -->
                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 border border-white/10 px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-md group-hover:bg-amber-500/20 group-hover:text-amber-200 transition-all">${item.section ? item.section.toUpperCase() : 'FOLDER'}</p>
             </div>`;
         }
@@ -231,10 +231,10 @@ export function generateVideoCardHtml(item, isAdmin) {
                     ${topicTitle}
                 </h4>
 
-                <!-- 3. Main Title -->
-                <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl px-2">
+                <!-- 3. Main Title (REMOVED) -->
+                <!-- <h3 class="text-white text-xl md:text-2xl font-black leading-snug selection:bg-emerald-500 tracking-tight drop-shadow-2xl px-2">
                     ${item.title}
-                </h3>
+                </h3> -->
 
                 <!-- Branding Footer -->
                 <div class="mt-auto mb-2 flex flex-col items-center gap-2 opacity-60">
@@ -265,10 +265,10 @@ export function generateVideoCardHtml(item, isAdmin) {
                     ${topicTitle}
                 </h4>
 
-                <!-- 3. Main Title -->
-                <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
+                <!-- 3. Main Title (REMOVED) -->
+                <!-- <h3 class="text-white text-xl md:text-2xl font-black leading-tight selection:bg-blue-500 tracking-tight drop-shadow-2xl mb-6 px-4">
                     ${item.title}
-                </h3>
+                </h3> -->
 
                 <!-- Branding Footer -->
                 <div class="mt-2 flex flex-col items-center gap-2">
@@ -359,7 +359,9 @@ export function generateVideoCardHtml(item, isAdmin) {
             ${contentDisplay}
             <div class="p-5">
                 <div class="flex justify-between items-start gap-3">
-                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">${item.title}</h4>
+                    <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">
+                        ${isFolder ? '' : item.title}
+                    </h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
                         ${!isFile ? `<button onclick="window.openVideoAnalytics('${item.id}')" class="text-slate-300 hover:text-blue-500 transition-colors" title="View Analytics"><i class="fas fa-eye text-xs"></i></button>` : ''}
