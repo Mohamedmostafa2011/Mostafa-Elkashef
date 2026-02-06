@@ -1,7 +1,7 @@
 import { db } from "./config.js";
 import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils_v7.js";
+import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils_v7.js?v=7";
 import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage_v4.js";
 
@@ -596,6 +596,8 @@ export function openFileViewer(url, type = 'file') {
     const content = document.getElementById('file-viewer-content');
 
     if (!modal || !content) return;
+
+    console.log("Opening viewer for:", url, "Type:", type);
 
     // Push State for Back Button Support - Ensure it's unique
     history.pushState({ modal: 'fileViewer', timestamp: Date.now() }, "", "#view-file");
