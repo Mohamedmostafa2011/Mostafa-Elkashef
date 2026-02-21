@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mostafa Elkashef</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- SortableJS for Mobile/Touch Dragging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Phone Input CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- PDF.js for reliable rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Set worker globally
+        window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { dark: '#0f172a', primary: '#2563eb', secondary: '#4338ca', accent: '#f59e0b' },
+                        surface: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .profile-clickable {
+            cursor: pointer;
+        }
+
+        body.is-instructor .profile-clickable {
+            cursor: default !important;
+        }
+
+        /* Essential Fixes for Phone Input Library */
+        .iti {
+            width: 100% !important;
+        }
+
+        .iti--separate-dial-code .iti__selected-dial-code {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #475569;
+            margin-left: 4px;
+        }
+
+        /* Ensure input is never hidden by library failed states */
+        input[type="tel"] {
+            visibility: visible !important;
+        }
+    </style>
+    <meta property="og:image"
+        content="https://scontent.fcai19-6.fna.fbcdn.net/v/t39.30808-6/382720736_309613345100945_2509174250981159575_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=W_iX_K7qhkAQ7kNvwFh3iOW&_nc_oc=AdmPzhxMYMOzng9ORiLJYjhAAThuVt-j7rEQiSHE73fgfImJlM6DVxKSambUf4nZaHk&_nc_zt=23&_nc_ht=scontent.fcai19-6.fna&_nc_gid=1pRl66iO2rAM6bc-YpGXIw&oh=00_Afs5zO3xB4sQ2XgC6cjF8PqSmuo0IVzZg6BNgP4MifI3CQ&oe=69925E93" />
+</head>
+
+<body class="bg-surface text-slate-800 h-screen-safe overflow-hidden selection:bg-brand-primary selection:text-white">
+
+    <div id="toast-container" class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- ================= AUTH SCREEN ================= -->
+    <div id="auth-screen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div class="absolute inset-0 opacity-10"
+            style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+
+        <div
+            class="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-2xl relative overflow-hidden fade-in mx-4 max-h-[95vh] overflow-y-auto">
+
+            <!-- Branding Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-display font-bold text-slate-900 tracking-tight">Mostafa Elkashef</h1>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Math Platform</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex p-1 bg-slate-100 rounded-xl mb-8">
+                <button onclick="switchTab('login')" id="tab-login"
+                    class="flex-1 py-2.5 text-sm font-bold rounded-lg shadow-sm bg-white text-brand-primary transition-all">Login</button>
+                <button onclick="switchTab('signup')" id="tab-signup"
+                    class="flex-1 py-2.5 text-sm font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all">Create
+                    an account</button>
+            </div>
+
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-display font-medium text-slate-500 tracking-tight" id="auth-title">Welcome Back
+                </h2>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form" class="space-y-5">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <input type="tel" id="login-phone">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Password</label>
+                    <input type="password" id="login-pass"
+                        class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary focus:ring-2 focus:ring-brand-light outline-none transition"
+                        placeholder="••••••••">
+                </div>
+                <button id="btn-login"
+                    class="w-full bg-brand-primary text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-xl shadow-blue-200 active:scale-[0.98]">
+                    Log In
+                </button>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="space-y-5 hidden">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Full Name</label>
+                    <input type="text" id="reg-name"
+                        class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none"
+                        placeholder="e.g. Ahmed Ali">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Select Courses</label>
+                    <div id="reg-courses-container"
+                        class="w-full p-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 max-h-48 overflow-y-auto space-y-2">
+                        <p class="text-slate-400 italic">Loading Courses...</p>
+                    </div>
+                </div>
+
+                <div id="course-code-field" class="hidden bg-amber-50 p-4 rounded-xl border border-amber-100">
+                    <label class="text-xs font-bold text-amber-600 uppercase mb-1 block"><i
+                            class="fas fa-lock mr-1"></i> Group Code Required</label>
+                    <input type="text" id="reg-code"
+                        class="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-lg text-sm font-bold text-amber-800 placeholder-amber-300 focus:ring-2 focus:ring-amber-100 outline-none uppercase tracking-widest"
+                        placeholder="e.g. 10A">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <input type="tel" id="reg-phone">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Create Password</label>
+                    <input type="password" id="reg-pass"
+                        class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none"
+                        placeholder="Min. 6 characters">
+                </div>
+                <button id="btn-create-account"
+                    class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition shadow-xl active:scale-[0.98]">
+                    Create Account
+                </button>
+                <p class="text-[10px] text-slate-400 text-center">Admin approval required for access.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PENDING SCREEN ================= -->
+    <div id="pending-screen"
+        class="fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-50 hidden text-center p-6">
+        <div
+            class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-4xl mb-6 shadow-xl text-amber-500 animate-pulse">
+            <i class="fas fa-hourglass-half"></i>
+        </div>
+        <h1 class="text-3xl font-display font-bold text-slate-900 mb-2">Approval Pending</h1>
+        <p class="text-slate-500 max-w-sm mb-8 leading-relaxed">
+            Your account has been created! Please contact <b class="text-slate-800">Mr. Mostafa</b> to verify your
+            enrollment and activate your access.
+        </p>
+        <div class="flex gap-3">
+            <button onclick="location.reload()"
+                class="bg-brand-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-lg hover:bg-blue-600">Refresh
+                Status</button>
+            <button id="logout-pending"
+                class="bg-white border border-slate-200 text-red-500 px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-red-50">Log
+                Out</button>
+        </div>
+    </div>
+
+    <!-- ================= APP SCREEN ================= -->
+    <div id="app-screen" class="hidden flex h-screen-safe w-full relative">
+        <!-- Sidebar -->
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 flex flex-col shadow-2xl md:shadow-none">
+            <div class="h-20 flex items-center px-6 gap-3 border-b border-slate-50">
+                <div
+                    class="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-200">
+                    <i class="fas fa-cube"></i>
+                </div>
+                <div>
+                    <h1 class="font-display font-bold text-slate-900 text-lg leading-none">Mostafa Elkashef</h1>
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Platform</span>
+                </div>
+                <button id="close-sidebar" class="md:hidden ml-auto text-slate-400"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <nav id="nav-links" class="flex-1 p-4 space-y-1 overflow-y-auto"></nav>
+            <div class="p-4 border-t border-slate-50 dark:border-slate-800">
+                <button onclick="toggleDarkMode()"
+                    class="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-brand-primary hover:bg-slate-50 rounded-xl text-sm font-bold py-3 transition mb-2">
+                    <i id="dark-mode-icon" class="fas fa-moon"></i> <span id="dark-mode-text">Dark Mode</span>
+                </button>
+                <button onclick="window.toggleSettingsModal()"
+                    class="hidden w-full flex items-center justify-center gap-2 text-slate-400 hover:text-brand-primary hover:bg-slate-50 rounded-xl text-sm font-bold py-3 transition mb-2">
+                    <i class="fas fa-cog"></i> <span>Settings</span>
+                </button>
+                <button id="logout-btn"
+                    class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold py-3 transition">
+                    <i class="fas fa-sign-out-alt"></i> Log Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col md:ml-72 min-w-0 bg-surface dark:bg-slate-950">
+            <header
+                class="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 sticky top-0 z-30">
+                <div class="flex items-center gap-4">
+                    <button id="open-sidebar" class="md:hidden p-2 -ml-2 text-slate-600"><i
+                            class="fas fa-bars text-xl"></i></button>
+                    <h2
+                        class="font-display font-extrabold text-slate-900 dark:text-white text-lg sm:text-2xl tracking-tighter truncate max-w-[180px] sm:max-w-none">
+                        Mostafa Elkashef</h2>
+                </div>
+
+                <div id="header-profile-area" onclick="window.handleHeaderProfileClick()"
+                    class="flex items-center gap-3 group/profile profile-clickable">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 p-0.5 group-hover/profile:scale-105 transition-transform shadow-lg shadow-blue-500/10">
+                        <div
+                            class="w-full h-full bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-brand-primary font-bold text-lg">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <p id="header-user"
+                            class="text-sm font-bold text-slate-800 dark:text-white group-hover/profile:text-brand-primary transition-colors">
+                            Loading...</p>
+                        <p id="header-role"
+                            class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                            ...</p>
+                    </div>
+                </div>
+            </header>
+            <div id="main-view" class="flex-1 overflow-y-auto p-6 md:p-10 pb-32"></div>
+        </main>
+        <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
+    </div>
+
+    <!-- ================= CREATE/EDIT COURSE MODAL ================= -->
+    <div id="course-modal"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="modal-title">Create New
+                    Course</h3>
+                <button onclick="toggleCourseModal()"
+                    class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <input type="hidden" id="edit-course-id">
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Course Title</label>
+                    <input type="text" id="new-course-title"
+                        class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
+                        placeholder="e.g. IGCSE Year 10 - Mechanics">
+                </div>
+
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <label
+                        class="text-xs font-bold text-brand-primary uppercase tracking-wider flex items-center gap-2 mb-2">
+                        <i class="fas fa-layer-group"></i> Subcourses (Codes)
+                    </label>
+                    <div id="subcourse-container" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        <!-- Dynamic inputs will appear here -->
+                    </div>
+                    <p class="text-[10px] text-blue-400 mt-3">Type a code (e.g. "10A") to add it. Use the trash icon to
+                        remove.</p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="handleSaveCourse()"
+                        class="flex-1 bg-brand-dark text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition shadow-lg flex justify-center items-center gap-2">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button onclick="handleDeleteCourse()" id="btn-delete-course"
+                        class="hidden px-4 bg-red-50 border border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-100 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADD CONTENT MODAL ================= -->
+    <div id="content-modal"
+        class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div
+                class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="content-modal-title">Add
+                    Content</h3>
+                <button onclick="toggleContentModal()"
+                    class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <input type="hidden" id="content-type">
+                <input type="hidden" id="content-edit-id">
+
+                <!-- Topic Designer Fields (MOVED UP) -->
+                <div id="topic-fields" class="grid grid-cols-1 sm:grid-cols-3 gap-4 hidden">
+                    <div class="sm:col-span-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Topic Index</label>
+                        <input type="text" id="content-topic-no"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition"
+                            placeholder="Topic 1">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Topic Title</label>
+                        <input type="text" id="content-topic-title"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary transition"
+                            placeholder="Math Foundations">
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
+                        <input type="text" id="content-title"
+                            class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
+                            placeholder="e.g. Session 1">
+                    </div>
+                    <input type="hidden" id="content-order" value="1">
+                </div>
+
+                <!-- File Upload Area -->
+                <div id="file-upload-section" class="hidden">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Upload Files
+                        (Unlimited)</label>
+                    <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 transition cursor-pointer relative"
+                        id="drop-zone">
+                        <input type="file" id="content-file" class="absolute inset-0 opacity-0 cursor-pointer" multiple>
+                        <div class="text-slate-400">
+                            <i class="fas fa-cloud-upload-alt text-3xl mb-2"></i>
+                            <p class="text-xs font-bold" id="file-label">Click or drag files here</p>
+                        </div>
+                    </div>
+
+                    <!-- File List for Renaming -->
+                    <div id="file-list-container" class="mt-4 space-y-2 hidden">
+                        <!-- Dynamic file items will appear here -->
+                    </div>
+
+                    <div id="upload-progress" class="hidden mt-2">
+                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-brand-primary w-0 transition-all duration-300" style="width: 0%">
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-right text-brand-primary font-bold mt-1">Uploading...</p>
+                    </div>
+                </div>
+
+                <!-- Dynamic Input Area -->
+                <div id="content-input-area">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider"
+                        id="content-label">Content</label>
+                    <textarea id="content-body" rows="4"
+                        class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand-primary transition"
+                        placeholder="Type here..."></textarea>
+                    <input type="text" id="content-link"
+                        class="hidden w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand-primary transition"
+                        placeholder="https://...">
+                </div>
+
+                <button onclick="handleSaveContent()" id="save-content-btn"
+                    class="w-full bg-brand-primary text-white font-bold py-3.5 rounded-xl hover:bg-blue-600 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
+                    Save / Post
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL REMOVED -->
+
+    <!-- ================= FILE VIEWER MODAL ================= -->
+    <div id="file-viewer-modal"
+        class="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900 hidden fade-in">
+
+        <!-- Close Button (Fixed Global) -->
+        <button onclick="window.closeFileViewer()"
+            class="fixed top-5 right-5 z-[2000] flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full shadow-2xl transition active:scale-95 border-2 border-white/20">
+            <i class="fas fa-times text-lg"></i>
+            <span class="font-bold text-sm">Close</span>
+        </button>
+
+        <div class="relative w-full h-full md:h-[90vh] md:max-w-6xl flex flex-col justify-center items-center p-4">
+            <!-- Content Container -->
+            <div id="file-viewer-content"
+                class="w-full h-full flex items-center justify-center overflow-hidden rounded-xl shadow-2xl bg-black/50 relative">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- VIDEO ANALYTICS MODAL -->
+    <div id="video-analytics-modal" class="fixed inset-0 z-[80] hidden">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
+            onclick="document.getElementById('video-analytics-modal').classList.add('hidden')"></div>
+        <div
+            class="absolute inset-x-4 top-[10%] bottom-[10%] md:inset-x-[15%] md:top-[15%] md:bottom-[15%] bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in duration-300">
+            <div
+                class="bg-white dark:bg-slate-900 p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Video Analytics</h2>
+                    <p class="text-slate-500 text-sm">Viewer engagement statistics</p>
+                </div>
+                <button onclick="document.getElementById('video-analytics-modal').classList.add('hidden')"
+                    class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="analytics-content" class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950/50">
+                <!-- Data will be injected here -->
+                <div class="flex items-center justify-center h-full">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <!-- Removed old ITI script from here -->
+
+    <!-- Main Application Logic -->
+    <script type="module" src="js/main.js?v=FIX_FINAL_V2"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,12 @@
+{
+    "operations": [
+        {
+            "operation": "add_or_update",
+            "path": "course_uploads/nested_test.txt",
+            "content": "SGVsbG8gTmVzdGVk",
+            "encoding": "base64"
+        }
+    ],
+    "commit_message": "Test Nested Upload",
+    "summary": "Test Nested"
+}

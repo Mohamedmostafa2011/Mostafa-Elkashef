@@ -1,0 +1,12 @@
+{
+    "operations": [
+        {
+            "operation": "add_or_update",
+            "path": "test_utf8.txt",
+            "content": "Hello UTF8",
+            "encoding": "utf-8"
+        }
+    ],
+    "commit_message": "Test UTF8",
+    "summary": "Test UTF8"
+}
