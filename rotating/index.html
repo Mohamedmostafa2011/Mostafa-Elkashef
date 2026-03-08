@@ -402,6 +402,62 @@ html, body {
   padding: 0 1.1rem; gap: 1.6rem; flex-shrink: 0;
   overflow-x: auto;
 }
+/* ══════════════ ANDROID DOWNLOAD BTN ══════════════ */
+.btn-android {
+  display: flex; align-items: center; gap: .9rem;
+  background: linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%);
+  border: 2px solid #3ddc84;
+  border-radius: 16px;
+  padding: .8rem 1.4rem;
+  text-decoration: none;
+  color: #3ddc84;
+  margin-bottom: 1.8rem;
+  width: 100%;
+  max-width: 340px;
+  position: relative;
+  overflow: hidden;
+  transition: all .2s ease;
+  box-shadow: 0 0 0 0 rgba(61,220,132,.2), inset 0 1px 0 rgba(61,220,132,.1);
+  animation: androidpulse 3s ease-in-out infinite;
+}
+@keyframes androidpulse {
+  0%,100%{ box-shadow: 0 0 12px rgba(61,220,132,.15), inset 0 1px 0 rgba(61,220,132,.1); }
+  50%{ box-shadow: 0 0 30px rgba(61,220,132,.35), inset 0 1px 0 rgba(61,220,132,.1); }
+}
+.btn-android::before {
+  content: '';
+  position: absolute; top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(61,220,132,.08), transparent);
+  animation: androidsweep 3.5s ease-in-out infinite;
+}
+@keyframes androidsweep {
+  0%{ left: -100%; } 60%,100%{ left: 160%; }
+}
+.btn-android:active {
+  transform: scale(.97);
+  border-color: #5dffa0;
+  background: linear-gradient(135deg, #223322 0%, #131f13 100%);
+}
+.android-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(61,220,132,.5));
+}
+.android-text {
+  flex: 1; display: flex; flex-direction: column; gap: .1rem;
+}
+.android-small {
+  font-size: .58rem; letter-spacing: .18em; opacity: .65;
+  font-family: var(--mono); text-transform: uppercase;
+}
+.android-big {
+  font-size: .9rem; font-weight: 700; font-family: var(--display);
+  letter-spacing: .08em;
+}
+.android-arrow {
+  width: 20px; height: 20px; flex-shrink: 0; opacity: .7;
+  animation: arrowbounce 1.8s ease-in-out infinite;
+}
 .sbar::-webkit-scrollbar { display: none; }
 .sitem { font-size: .62rem; color: var(--dim); white-space: nowrap; }
 .sitem b { color: var(--accent); font-weight: 400; }
@@ -416,6 +472,20 @@ html, body {
     <div class="logo-tag">By Mostafa ELkashef · Math Platform</div>
     <div class="logo">ROT<span class="logo-angle">∠</span>TING</div>
     <div class="logo-sub">Layered annotation &amp; rotation workspace</div>
+
+    <a class="btn-android" href="https://huggingface.co/datasets/Mostafaelkashef/Kashef-files-v2/resolve/main/app-apk-69adce5c40af4-1772998236.apk" download>
+      <svg class="android-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.523 15.341a.836.836 0 01-.835.835.836.836 0 01-.836-.835.836.836 0 01.836-.836.836.836 0 01.835.836zm-9.375 0a.836.836 0 01-.836.835.836.836 0 01-.835-.835.836.836 0 01.835-.836.836.836 0 01.836.836zm9.75-3.757l1.7-2.941a.354.354 0 00-.129-.483.354.354 0 00-.483.13l-1.72 2.977A10.372 10.372 0 0012 10.5a10.372 10.372 0 00-5.266 1.767L5.014 9.29a.354.354 0 00-.483-.13.354.354 0 00-.13.483l1.7 2.941C3.392 13.66 1.5 16.07 1.5 18.938h21c0-2.868-1.892-5.278-4.602-6.354z"/>
+      </svg>
+      <div class="android-text">
+        <span class="android-small">Download for</span>
+        <span class="android-big">Android App</span>
+      </div>
+      <svg class="android-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M12 4v16m-6-6l6 6 6-6"/>
+      </svg>
+    </a>
+
     <div class="s-lbl">— Choose your base layer —</div>
     <div class="s-cards">
       <div class="scard" id="sc-grid" onclick="pickSetup('grid')">
