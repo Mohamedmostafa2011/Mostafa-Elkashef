@@ -93,8 +93,6 @@ function handleCourseSelectionChange() {
     }
 }
 
-// handleCourseChange removed and replaced by handleCourseSelectionChange
-
 async function handleLogin() {
     try {
         const pass = document.getElementById('login-pass').value;

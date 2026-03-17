@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
-import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal, openVideoAnalytics } from "./admin.js?v=8";
+import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js?v=8";
 import { renderStudentDashboard } from "./student.js?v=2";
 import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal } from "./dashboard_v9.js?v=FIX_FINAL_V2";
 import { showToast } from "./utils_v7.js";
@@ -34,7 +34,7 @@ window.openFileViewer = openFileViewer;
 window.closeFileViewer = closeFileViewer;
 window._closeViewerInternal = _closeViewerInternal;
 window.deleteStudentAccount = deleteStudentAccount;
-window.openVideoAnalytics = openVideoAnalytics;
+
 window.renderCourseSelection = renderCourseSelection;
 
 window.switchToCourseSelection = () => {

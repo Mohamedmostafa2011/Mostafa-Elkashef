@@ -18,7 +18,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- Phone Input CSS -->
+    <!-- Phone Input CSS + JS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 
@@ -57,23 +57,6 @@
 
         body.is-instructor .profile-clickable {
             cursor: default !important;
-        }
-
-        /* Essential Fixes for Phone Input Library */
-        .iti {
-            width: 100% !important;
-        }
-
-        .iti--separate-dial-code .iti__selected-dial-code {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: #475569;
-            margin-left: 4px;
-        }
-
-        /* Ensure input is never hidden by library failed states */
-        input[type="tel"] {
-            visibility: visible !important;
         }
     </style>
     <meta property="og:image"
@@ -157,11 +140,13 @@
                 </div>
 
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone Number</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Phone
+                        Number</label>
                     <input type="tel" id="reg-phone">
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Create Password</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Create
+                        Password</label>
                     <input type="password" id="reg-pass"
                         class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:border-brand-primary outline-none"
                         placeholder="Min. 6 characters">
@@ -273,7 +258,8 @@
         <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
             <div
                 class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="modal-title">Create New
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="modal-title">Create
+                    New
                     Course</h3>
                 <button onclick="toggleCourseModal()"
                     class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
@@ -297,7 +283,8 @@
                     <div id="subcourse-container" class="space-y-2 max-h-40 overflow-y-auto pr-2">
                         <!-- Dynamic inputs will appear here -->
                     </div>
-                    <p class="text-[10px] text-blue-400 mt-3">Type a code (e.g. "10A") to add it. Use the trash icon to
+                    <p class="text-[10px] text-blue-400 mt-3">Type a code (e.g. "10A") to add it. Use the trash icon
+                        to
                         remove.</p>
                 </div>
 
@@ -321,7 +308,8 @@
         <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
             <div
                 class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="content-modal-title">Add
+                <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white" id="content-modal-title">
+                    Add
                     Content</h3>
                 <button onclick="toggleContentModal()"
                     class="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
@@ -349,7 +337,8 @@
 
                 <div class="flex gap-4">
                     <div class="flex-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title / Name</label>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title /
+                            Name</label>
                         <input type="text" id="content-title"
                             class="w-full mt-1 p-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition"
                             placeholder="e.g. Session 1">
@@ -426,32 +415,7 @@
         </div>
     </div>
 
-    <!-- VIDEO ANALYTICS MODAL -->
-    <div id="video-analytics-modal" class="fixed inset-0 z-[80] hidden">
-        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
-            onclick="document.getElementById('video-analytics-modal').classList.add('hidden')"></div>
-        <div
-            class="absolute inset-x-4 top-[10%] bottom-[10%] md:inset-x-[15%] md:top-[15%] md:bottom-[15%] bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in duration-300">
-            <div
-                class="bg-white dark:bg-slate-900 p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white font-display">Video Analytics</h2>
-                    <p class="text-slate-500 text-sm">Viewer engagement statistics</p>
-                </div>
-                <button onclick="document.getElementById('video-analytics-modal').classList.add('hidden')"
-                    class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
 
-            <div id="analytics-content" class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950/50">
-                <!-- Data will be injected here -->
-                <div class="flex items-center justify-center h-full">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- SCRIPTS -->
     <!-- Removed old ITI script from here -->
