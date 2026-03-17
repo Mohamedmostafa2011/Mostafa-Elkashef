@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Rot∠ting — by Mostafa ELkashef</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:       #05080f;
+  --panel:    #0d1428;
+  --panel2:   #111a35;
+  --border:   #1a2a4a;
+  --border2:  #243660;
+  --accent:   #00d4ff;
+  --accent2:  #0055ff;
+  --accent3:  #ff6b00;
+  --text:     #b8d0f0;
+  --dim:      #3d5a80;
+  --mid:      #6a8aaa;
+  --danger:   #ff3355;
+  --mono:     'Courier Prime', monospace;
+  --display:  'Orbitron', sans-serif;
+}
+
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font-family: var(--mono);
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+
+/* ══════════════ SETUP ══════════════ */
+#setup {
+  position: fixed; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--bg); z-index: 999; padding: 2rem;
+}
+.sbg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.sbg::before {
+  content: ''; position: absolute; inset: -50%;
+  background: linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+  background-size: 56px 56px; animation: drift 30s linear infinite;
+}
+.sbg::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 55% 45% at 50% 50%, rgba(0,85,255,.08), transparent 70%);
+}
+@keyframes drift { to { transform: translate(56px,56px); } }
+
+.si { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; max-width: 600px; width: 100%; }
+
+.logo-tag { font-family: var(--display); font-size: .65rem; letter-spacing: .4em; color: var(--dim); margin-bottom: .5rem; }
+.logo { font-family: var(--display); font-size: clamp(2.4rem,9vw,4.2rem); font-weight: 900; letter-spacing: .12em; color: var(--accent); text-shadow: 0 0 40px rgba(0,212,255,.35); margin-bottom: .4rem; }
+.logo-sub { font-size: .7rem; color: var(--dim); letter-spacing: .2em; margin-bottom: 2.8rem; }
+.s-lbl { font-size: .7rem; color: var(--mid); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 1.2rem; }
+
+.s-cards { display: flex; gap: 1.4rem; margin-bottom: 2rem; width: 100%; }
+.scard {
+  background: var(--panel); border: 2px solid var(--border); border-radius: 18px;
+  padding: 2rem 1.4rem; flex: 1; text-align: center; cursor: pointer;
+  transition: all .18s ease; min-height: 160px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .7rem;
+}
+.scard:active, .scard.chosen {
+  border-color: var(--accent); background: rgba(0,212,255,.07);
+  box-shadow: 0 0 28px rgba(0,212,255,.15); transform: scale(.97);
+}
+.scard-icon { font-size: 2.8rem; }
+.scard-title { font-family: var(--display); font-size: .78rem; font-weight: 700; letter-spacing: .12em; color: var(--accent); }
+.scard-desc { font-size: .68rem; color: var(--dim); line-height: 1.6; }
+
+.cfg {
+  background: var(--panel); border: 2px solid var(--border); border-radius: 16px;
+  padding: 1.6rem; width: 100%; display: none; flex-direction: column; gap: 1.1rem;
+  animation: fadeup .2s ease;
+}
+.cfg.show { display: flex; }
+@keyframes fadeup { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+.cfg-row { display: flex; align-items: center; gap: 1rem; }
+.cfg-lbl { font-size: .65rem; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; width: 90px; flex-shrink: 0; }
+.cfg-inp {
+  background: var(--bg); border: 2px solid var(--border); color: var(--text);
+  padding: .55rem .8rem; font-family: var(--mono); font-size: 1.1rem; font-weight: 700;
+  border-radius: 8px; width: 100px; text-align: center; -webkit-appearance: none;
+}
+.cfg-inp:focus { outline: none; border-color: var(--accent); }
+.cfg-note { font-size: .65rem; color: var(--dim); }
+
+.btn-launch {
+  background: var(--accent); color: #000; border: none;
+  padding: .85rem 2.2rem; font-family: var(--display);
+  font-size: .75rem; font-weight: 700; letter-spacing: .15em;
+  border-radius: 10px; cursor: pointer; align-self: flex-end;
+  min-height: 52px; transition: all .15s;
+}
+.btn-launch:active { background: #30e8ff; transform: scale(.96); }
+
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 14px;
+  padding: 2.5rem; text-align: center; cursor: pointer;
+  color: var(--dim); display: flex; flex-direction: column;
+  align-items: center; gap: .8rem; width: 100%;
+  min-height: 130px; justify-content: center; transition: all .2s;
+}
+.upload-zone:active { border-color: var(--accent); color: var(--accent); }
+.upload-zone input { display: none; }
+.upload-icon { font-size: 2.5rem; }
+.upload-text { font-size: .75rem; line-height: 1.6; }
+
+/* ══════════════ APP ══════════════ */
+#app { display: none; flex-direction: column; height: 100vh; width: 100vw; }
+#app.show { display: flex; }
+
+/* TOOLBAR — tall for tablet fingers */
+.toolbar {
+  background: var(--panel); border-bottom: 2px solid var(--border);
+  height: 72px; flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 0 .9rem; gap: .55rem;
+  overflow-x: auto; overflow-y: hidden;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+
+.tlogo {
+  font-family: var(--display); font-size: .75rem; font-weight: 700;
+  color: var(--accent); letter-spacing: .15em; flex-shrink: 0;
+}
+.tsep { width: 2px; height: 36px; background: var(--border); flex-shrink: 0; margin: 0 .2rem; }
+
+.tbtn {
+  background: transparent; border: 2px solid var(--border2);
+  color: var(--mid); height: 52px; padding: 0 1.1rem;
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .06em;
+  border-radius: 12px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; gap: .5rem;
+  transition: background .12s, border-color .12s, color .12s;
+  white-space: nowrap; min-width: 52px; justify-content: center;
+}
+.tbtn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.tbtn .lbl { display: none; }
+@media (min-width: 640px) { .tbtn .lbl { display: inline; } }
+.tbtn:active { transform: scale(.93); }
+.tbtn.active { background: rgba(0,212,255,.13); border-color: var(--accent); color: var(--accent); }
+.tbtn.red { border-color: #ff335540; color: #ff335566; }
+.tbtn.red:active { background: rgba(255,51,85,.12); border-color: var(--danger); color: var(--danger); }
+
+/* color + size */
+.clr-wrap { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.ctrl-lbl { font-size: .6rem; color: var(--dim); white-space: nowrap; }
+#ink-color {
+  -webkit-appearance: none; width: 40px; height: 40px;
+  border: 2px solid var(--border2); border-radius: 10px;
+  background: none; cursor: pointer; padding: 3px;
+}
+#ink-color::-webkit-color-swatch-wrapper { padding: 0; }
+#ink-color::-webkit-color-swatch { border: none; border-radius: 6px; }
+
+.size-wrap { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+#ink-size {
+  -webkit-appearance: none; width: 90px; height: 5px;
+  background: var(--border); border-radius: 3px; outline: none;
+}
+#ink-size::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
+  background: var(--accent); border-radius: 50%; cursor: pointer;
+}
+
+/* ══════════════ WORKSPACE ══════════════ */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+
+/* LAYERS PANEL */
+.lpanel {
+  width: 230px; flex-shrink: 0;
+  background: var(--panel); border-right: 2px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: width .22s ease;
+}
+.lpanel.collapsed { width: 58px; }
+
+.lhdr {
+  padding: .85rem 1rem; border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  height: 58px; flex-shrink: 0;
+}
+.lhdr-title {
+  font-family: var(--display); font-size: .54rem; font-weight: 700;
+  color: var(--dim); letter-spacing: .18em; white-space: nowrap; overflow: hidden;
+}
+.lpanel.collapsed .lhdr-title { visibility: hidden; width: 0; }
+.lhdr-btns { display: flex; gap: .45rem; flex-shrink: 0; }
+
+.icon-btn {
+  background: transparent; border: 2px solid var(--border2);
+  color: var(--mid); width: 38px; height: 38px;
+  border-radius: 9px; cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .12s; flex-shrink: 0;
+}
+.icon-btn:active { transform: scale(.88); border-color: var(--accent); color: var(--accent); }
+
+.base-badge {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .75rem 1rem; border-bottom: 2px solid var(--border);
+  font-size: .65rem; color: var(--dim); flex-shrink: 0; min-height: 48px;
+}
+.lpanel.collapsed .base-badge .badge-text { display: none; }
+
+.llist { flex: 1; overflow-y: auto; padding: .5rem .5rem; }
+.llist::-webkit-scrollbar { width: 3px; }
+.llist::-webkit-scrollbar-thumb { background: var(--border); }
+
+.litem {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .75rem .65rem; border-radius: 12px;
+  cursor: pointer; border: 2px solid transparent;
+  margin-bottom: .35rem; min-height: 56px;
+  transition: all .12s;
+}
+.litem:active { background: rgba(255,255,255,.04); }
+.litem.active { background: rgba(0,212,255,.08); border-color: rgba(0,212,255,.3); }
+
+.ldot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent2); flex-shrink: 0;
+}
+.litem.active .ldot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.lpanel.collapsed .ldot { margin: 0 auto; }
+
+.lname {
+  flex: 1; font-size: .72rem; color: var(--text);
+  background: transparent; border: none; outline: none;
+  font-family: var(--mono); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  pointer-events: none;
+}
+.litem.active .lname { pointer-events: auto; }
+.lpanel.collapsed .lname { display: none; }
+
+.lrot {
+  font-size: .56rem; color: var(--dim);
+  background: rgba(255,255,255,.05); border-radius: 5px;
+  padding: 2px 6px; white-space: nowrap; flex-shrink: 0;
+}
+.litem.active .lrot { color: var(--accent); }
+.lpanel.collapsed .lrot { display: none; }
+
+.ldel {
+  background: transparent; border: none;
+  color: transparent; cursor: pointer; font-size: .85rem;
+  width: 32px; height: 32px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .12s; flex-shrink: 0;
+}
+.litem.active .ldel { color: var(--mid); }
+.ldel:active { color: var(--danger) !important; background: rgba(255,51,85,.14); }
+.lpanel.collapsed .ldel { display: none; }
+
+/* ══════════════ CANVAS AREA ══════════════ */
+.carea {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: var(--bg); overflow: hidden; position: relative;
+  touch-action: none;
+}
+.carea::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0,85,255,.04), transparent 70%);
+  pointer-events: none;
+}
+
+.ccon {
+  position: relative; transform-origin: center center;
+  box-shadow: 0 0 0 1px var(--border), 0 0 0 2px rgba(0,212,255,.04), 0 20px 70px rgba(0,0,0,.9);
+}
+
+#base-c { display: block; position: relative; z-index: 1; }
+.layer-c { position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; }
+#arc-c   { position: absolute; top: 0; left: 0; z-index: 54; pointer-events: none; }
+#iov-c   { position: absolute; top: 0; left: 0; z-index: 55; touch-action: none; }
+
+/* PIVOT */
+#piv-ind {
+  position: absolute; z-index: 60;
+  pointer-events: none; display: none;
+  transform: translate(-50%,-50%);
+}
+.pr { position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:24px; height:24px; border:2.5px solid var(--accent3); border-radius:50%; box-shadow:0 0 14px rgba(255,107,0,.5); animation:pp 1.5s ease-in-out infinite; }
+@keyframes pp { 0%,100%{box-shadow:0 0 10px rgba(255,107,0,.4)}50%{box-shadow:0 0 22px rgba(255,107,0,.85)} }
+.ph { position:absolute; width:34px; height:2.5px; background:rgba(255,107,0,.9); top:50%; left:50%; transform:translate(-50%,-50%); }
+.pv { position:absolute; width:2.5px; height:34px; background:rgba(255,107,0,.9); top:50%; left:50%; transform:translate(-50%,-50%); }
+.pd { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:7px; height:7px; background:var(--accent3); border-radius:50%; }
+
+/* ROT HINT */
+#rot-hint {
+  position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+  background: rgba(5,8,15,.9); border: 2px solid var(--accent3);
+  color: var(--accent3); font-size: .72rem;
+  padding: .55rem 1.4rem; border-radius: 28px;
+  pointer-events: none; white-space: nowrap;
+  opacity: 0; transition: opacity .25s; letter-spacing: .08em;
+  backdrop-filter: blur(6px); z-index: 100;
+}
+#rot-hint.show { opacity: 1; }
+
+.logo-angle {
+  color: var(--accent3);
+  font-size: 1.15em;
+  vertical-align: -.05em;
+  text-shadow: 0 0 30px rgba(255,107,0,.7), 0 0 60px rgba(255,107,0,.3);
+  display: inline-block;
+  animation: anglepulse 2.4s ease-in-out infinite;
+}
+@keyframes anglepulse {
+  0%,100%{ text-shadow:0 0 20px rgba(255,107,0,.5),0 0 40px rgba(255,107,0,.2); transform:scale(1); }
+  50%{ text-shadow:0 0 40px rgba(255,107,0,.95),0 0 80px rgba(255,107,0,.5); transform:scale(1.08); }
+}
+
+/* ══════════════ AD BANNER ══════════════ */
+#ad-banner {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #05080f 0%, #0d1428 50%, #0a1020 100%);
+  border-top: 2px solid var(--accent);
+  box-shadow: 0 -8px 40px rgba(0,212,255,.15), 0 -2px 0 rgba(0,212,255,.4);
+  padding: .7rem 1.2rem;
+  display: flex; align-items: center; gap: 1.2rem;
+  animation: adslide 0.6s cubic-bezier(0.22,1,0.36,1) both;
+  animation-delay: 1.8s; opacity: 0;
+}
+@keyframes adslide {
+  from{ opacity:0; transform:translateY(100%); }
+  to{ opacity:1; transform:translateY(0); }
+}
+.ad-dismiss {
+  position: absolute; top: .5rem; right: .7rem;
+  background: transparent; border: none;
+  color: var(--dim); font-size: .9rem; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.ad-dismiss:hover { color: var(--accent); background: rgba(0,212,255,.1); }
+.ad-icon-wrap {
+  flex-shrink: 0; width: 52px; height: 52px;
+  background: radial-gradient(circle, rgba(0,212,255,.15) 0%, transparent 70%);
+  border: 2px solid rgba(0,212,255,.3); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  animation: adrotate 8s linear infinite;
+}
+@keyframes adrotate { to{ transform: rotate(360deg); } }
+.ad-body { flex: 1; min-width: 0; }
+.ad-label {
+  font-size: .55rem; letter-spacing: .22em; color: var(--dim);
+  font-family: var(--display); text-transform: uppercase; margin-bottom: .25rem;
+}
+.ad-headline {
+  font-family: var(--display); font-size: clamp(.8rem, 3vw, 1rem);
+  font-weight: 700; letter-spacing: .08em;
+  color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: .2rem;
+}
+.ad-headline .angle-sym { color: var(--accent3); }
+.ad-sub {
+  font-size: .65rem; color: var(--mid); line-height: 1.5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ad-cta {
+  flex-shrink: 0;
+  background: var(--accent); color: #000;
+  border: none; padding: .65rem 1.1rem;
+  font-family: var(--display); font-size: .65rem; font-weight: 700;
+  letter-spacing: .12em; border-radius: 10px; cursor: pointer;
+  text-decoration: none; display: flex; flex-direction: column;
+  align-items: center; gap: .2rem;
+  transition: all .15s; white-space: nowrap;
+  box-shadow: 0 0 20px rgba(0,212,255,.3);
+}
+.ad-cta:hover { background: #30e8ff; box-shadow: 0 0 30px rgba(0,212,255,.5); }
+.ad-cta small { font-size: .5rem; opacity: .7; font-family: var(--mono); letter-spacing:.1em; }
+.ad-math-ticker {
+  display: flex; gap: 1.2rem; overflow: hidden; flex-shrink: 0;
+  border-left: 1px solid var(--border); padding-left: 1rem;
+}
+.amt { font-family: var(--display); font-size: .6rem; color: var(--dim);
+  display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.amt b { color: var(--accent2); font-size: .72rem; }
+@media (max-width: 640px) { .ad-math-ticker { display: none; } .ad-sub { display: none; } }
+
+.sbar {
+  height: 36px; background: var(--panel);
+  border-top: 2px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 1.1rem; gap: 1.6rem; flex-shrink: 0;
+  overflow-x: auto;
+}
+/* ══════════════ ANDROID DOWNLOAD BTN ══════════════ */
+.btn-android {
+  display: flex; align-items: center; gap: .9rem;
+  background: linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%);
+  border: 2px solid #3ddc84;
+  border-radius: 16px;
+  padding: .8rem 1.4rem;
+  text-decoration: none;
+  color: #3ddc84;
+  margin-bottom: 1.8rem;
+  width: 100%;
+  max-width: 340px;
+  position: relative;
+  overflow: hidden;
+  transition: all .2s ease;
+  box-shadow: 0 0 0 0 rgba(61,220,132,.2), inset 0 1px 0 rgba(61,220,132,.1);
+  animation: androidpulse 3s ease-in-out infinite;
+}
+@keyframes androidpulse {
+  0%,100%{ box-shadow: 0 0 12px rgba(61,220,132,.15), inset 0 1px 0 rgba(61,220,132,.1); }
+  50%{ box-shadow: 0 0 30px rgba(61,220,132,.35), inset 0 1px 0 rgba(61,220,132,.1); }
+}
+.btn-android::before {
+  content: '';
+  position: absolute; top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(61,220,132,.08), transparent);
+  animation: androidsweep 3.5s ease-in-out infinite;
+}
+@keyframes androidsweep {
+  0%{ left: -100%; } 60%,100%{ left: 160%; }
+}
+.btn-android:active {
+  transform: scale(.97);
+  border-color: #5dffa0;
+  background: linear-gradient(135deg, #223322 0%, #131f13 100%);
+}
+.android-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(61,220,132,.5));
+}
+.android-text {
+  flex: 1; display: flex; flex-direction: column; gap: .1rem;
+}
+.android-small {
+  font-size: .58rem; letter-spacing: .18em; opacity: .65;
+  font-family: var(--mono); text-transform: uppercase;
+}
+.android-big {
+  font-size: .9rem; font-weight: 700; font-family: var(--display);
+  letter-spacing: .08em;
+}
+.android-arrow {
+  width: 20px; height: 20px; flex-shrink: 0; opacity: .7;
+  animation: arrowbounce 1.8s ease-in-out infinite;
+}
+.sbar::-webkit-scrollbar { display: none; }
+.sitem { font-size: .62rem; color: var(--dim); white-space: nowrap; }
+.sitem b { color: var(--accent); font-weight: 400; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SETUP ═══════════ -->
+<div id="setup">
+  <div class="sbg"></div>
+  <div class="si">
+    <div class="logo-tag">By Mostafa ELkashef · Math Platform</div>
+    <div class="logo">ROT<span class="logo-angle">∠</span>TING</div>
+    <div class="logo-sub">Layered annotation &amp; rotation workspace</div>
+
+    <a class="btn-android" href="https://huggingface.co/datasets/Mostafaelkashef/Kashef-files-v2/resolve/main/app-apk-69adce5c40af4-1772998236.apk" download>
+      <svg class="android-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.523 15.341a.836.836 0 01-.835.835.836.836 0 01-.836-.835.836.836 0 01.836-.836.836.836 0 01.835.836zm-9.375 0a.836.836 0 01-.836.835.836.836 0 01-.835-.835.836.836 0 01.835-.836.836.836 0 01.836.836zm9.75-3.757l1.7-2.941a.354.354 0 00-.129-.483.354.354 0 00-.483.13l-1.72 2.977A10.372 10.372 0 0012 10.5a10.372 10.372 0 00-5.266 1.767L5.014 9.29a.354.354 0 00-.483-.13.354.354 0 00-.13.483l1.7 2.941C3.392 13.66 1.5 16.07 1.5 18.938h21c0-2.868-1.892-5.278-4.602-6.354z"/>
+      </svg>
+      <div class="android-text">
+        <span class="android-small">Download for</span>
+        <span class="android-big">Android App</span>
+      </div>
+      <svg class="android-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M12 4v16m-6-6l6 6 6-6"/>
+      </svg>
+    </a>
+
+    <div class="s-lbl">— Choose your base layer —</div>
+    <div class="s-cards">
+      <div class="scard" id="sc-grid" onclick="pickSetup('grid')">
+        <div class="scard-icon">⊞</div>
+        <div class="scard-title">Grid</div>
+        <div class="scard-desc">Generate a coordinate grid with custom columns, rows &amp; cell size</div>
+      </div>
+      <div class="scard" id="sc-img" onclick="pickSetup('img')">
+        <div class="scard-icon">🖼</div>
+        <div class="scard-title">Image</div>
+        <div class="scard-desc">Load a reference image from your device as the locked base</div>
+      </div>
+    </div>
+    <div class="cfg" id="grid-cfg">
+      <div class="cfg-row">
+        <span class="cfg-lbl">Columns</span>
+        <input class="cfg-inp" type="number" id="g-cols" value="20" min="2" max="60" inputmode="numeric">
+      </div>
+      <div class="cfg-row">
+        <span class="cfg-lbl">Rows</span>
+        <input class="cfg-inp" type="number" id="g-rows" value="14" min="2" max="40" inputmode="numeric">
+      </div>
+      <div class="cfg-row">
+        <span class="cfg-lbl">Cell size</span>
+        <input class="cfg-inp" type="number" id="g-cell" value="44" min="10" max="100" inputmode="numeric">
+        <span class="cfg-note">px</span>
+      </div>
+      <button class="btn-launch" onclick="launchGrid()">LAUNCH WORKSPACE →</button>
+    </div>
+    <div class="cfg" id="img-cfg">
+      <label class="upload-zone" for="img-file">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">Tap to browse · or drop an image file here</div>
+        <input type="file" id="img-file" accept="image/*" onchange="launchImage(event)">
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="app">
+
+  <div class="toolbar">
+    <div class="tlogo">ROT<span style="color:var(--accent3);font-size:1.1em;vertical-align:-.05em">∠</span>TING</div>
+    <div class="tsep"></div>
+
+    <button class="tbtn active" id="tb-annotate" onclick="setTool('annotate')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      <span class="lbl">DRAW</span>
+    </button>
+
+    <button class="tbtn" id="tb-eraser" onclick="setTool('eraser')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M20 20H7L3 16l10-10 7 7-3.5 3.5"/><path d="M6 11l2.9 2.9"/>
+      </svg>
+      <span class="lbl">ERASE</span>
+    </button>
+
+    <div class="tsep"></div>
+
+    <button class="tbtn" id="tb-pivot" onclick="setTool('pivot')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+      </svg>
+      <span class="lbl">PIVOT</span>
+    </button>
+
+    <button class="tbtn" id="tb-rotate" onclick="setTool('rotate')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+      </svg>
+      <span class="lbl">ROTATE</span>
+    </button>
+
+    <div class="tsep"></div>
+
+    <div class="clr-wrap">
+      <span class="ctrl-lbl">INK</span>
+      <input type="color" id="ink-color" value="#00d4ff">
+    </div>
+
+    <div class="size-wrap">
+      <span class="ctrl-lbl">SIZE</span>
+      <input type="range" id="ink-size" min="1" max="28" value="4">
+      <span id="size-lbl" style="font-size:.62rem;color:var(--mid);min-width:20px;font-family:var(--mono)">4</span>
+    </div>
+
+    <div class="tsep"></div>
+
+    <button class="tbtn red" id="tb-clear" onclick="clearLayer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+      </svg>
+      <span class="lbl">CLEAR</span>
+    </button>
+
+    <button class="tbtn" id="tb-resetrot" onclick="resetRot()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/>
+      </svg>
+      <span class="lbl">0°</span>
+    </button>
+  </div>
+
+  <div class="workspace">
+    <aside class="lpanel" id="lpanel">
+      <div class="lhdr">
+        <span class="lhdr-title">TRACING PAPERS</span>
+        <div class="lhdr-btns">
+          <button class="icon-btn" onclick="addLayer()" title="Add tracing paper">+</button>
+          <button class="icon-btn" id="collapse-btn" onclick="togglePanel()">‹</button>
+        </div>
+      </div>
+      <div class="base-badge">
+        <span>🔒</span><span class="badge-text">Base — locked</span>
+      </div>
+      <div class="llist" id="llist"></div>
+    </aside>
+
+    <div class="carea" id="carea">
+      <div class="ccon" id="ccon">
+        <canvas id="base-c"></canvas>
+        <canvas id="arc-c"></canvas>
+        <canvas id="iov-c"></canvas>
+        <div id="piv-ind">
+          <div class="pv"></div><div class="ph"></div>
+          <div class="pr"></div><div class="pd"></div>
+        </div>
+        <div id="rot-hint" id="rot-hint"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sbar">
+    <div class="sitem">TOOL: <b id="st-tool">DRAW</b></div>
+    <div class="sitem">LAYER: <b id="st-layer">—</b></div>
+    <div class="sitem">ROT: <b id="st-rot">0°</b></div>
+    <div class="sitem">PIVOT: <b id="st-piv">center</b></div>
+  </div>
+</div>
+
+<!-- ═══════════ AD BANNER ═══════════ -->
+<div id="ad-banner">
+  <button class="ad-dismiss" onclick="document.getElementById('ad-banner').style.display='none'" title="Dismiss">✕</button>
+  <div class="ad-icon-wrap">∠</div>
+  <div class="ad-body">
+    <div class="ad-label">✦ Powered by · Official Math Platform</div>
+    <div class="ad-headline">Mostafa ELkashef <span class="angle-sym">∠</span> Math Platform</div>
+    <div class="ad-sub">Master geometry, rotation &amp; advanced mathematics with Egypt's premier online math courses</div>
+  </div>
+  <div class="ad-math-ticker">
+    <div class="amt"><b>sin θ</b><span>Trig</span></div>
+    <div class="amt"><b>π r²</b><span>Geometry</span></div>
+    <div class="amt"><b>∫ dx</b><span>Calculus</span></div>
+  </div>
+  <a class="ad-cta" href="https://www.mostafaelkashef.com" target="_blank" rel="noopener">
+    VISIT NOW
+    <small>mostafaelkashef.com</small>
+  </a>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────
+const S = {
+  cw:0, ch:0, layers:[], activeId:null,
+  tool:'annotate', color:'#00d4ff', size:4,
+  drawing:false, curPath:null,
+  rotStart:null, panelOpen:true,
+};
+let lid=0;
+
+const baseC = document.getElementById('base-c');
+const bCtx  = baseC.getContext('2d');
+const iovC  = document.getElementById('iov-c');
+const iovCtx= iovC.getContext('2d');
+const arcC  = document.getElementById('arc-c');
+const arcCtx= arcC.getContext('2d');
+const ccon  = document.getElementById('ccon');
+const pivInd= document.getElementById('piv-ind');
+const rotHint=document.getElementById('rot-hint');
+
+// ── SETUP ──────────────────────────────────
+function pickSetup(type) {
+  ['grid','img'].forEach(t => {
+    document.getElementById(`sc-${t}`).classList.toggle('chosen', t===type);
+    document.getElementById(`${t}-cfg`).classList.toggle('show', t===type);
+  });
+}
+
+function launchGrid() {
+  const cols = clamp(+document.getElementById('g-cols').value||20, 2, 80);
+  const rows = clamp(+document.getElementById('g-rows').value||14, 2, 50);
+  const cell = clamp(+document.getElementById('g-cell').value||44, 10, 120);
+  initApp(cols*cell+64, rows*cell+64);
+  drawGrid(cols, rows, cell, 64);
+}
+
+function drawGrid(cols, rows, cell, pad) {
+  const ctx=bCtx, w=baseC.width, h=baseC.height;
+  const ox=Math.round(pad*.75), oy=Math.round(pad*.5);
+  ctx.fillStyle='#05080f'; ctx.fillRect(0,0,w,h);
+  for(let i=0;i<=cols;i++) for(let j=0;j<=rows;j++) {
+    if(i%5===0&&j%5===0){
+      ctx.fillStyle='rgba(0,212,255,.13)';
+      ctx.beginPath(); ctx.arc(ox+i*cell,oy+j*cell,2.5,0,Math.PI*2); ctx.fill();
+    }
+  }
+  for(let i=0;i<=cols;i++){
+    const x=ox+i*cell, mj=i%5===0;
+    ctx.strokeStyle=i===0?'rgba(0,212,255,.9)':mj?'rgba(0,212,255,.35)':'rgba(0,212,255,.1)';
+    ctx.lineWidth=i===0?2:mj?1:.5;
+    ctx.beginPath(); ctx.moveTo(x,oy); ctx.lineTo(x,oy+rows*cell); ctx.stroke();
+    if(i>0&&(mj||cols<=12)){
+      ctx.fillStyle=mj?'rgba(0,212,255,.7)':'rgba(0,212,255,.3)';
+      ctx.font=`${mj?'bold ':''} 11px Courier Prime, monospace`;
+      ctx.textAlign='center'; ctx.fillText(i,x,oy-10);
+    }
+  }
+  for(let j=0;j<=rows;j++){
+    const y=oy+j*cell, mj=j%5===0;
+    ctx.strokeStyle=j===0?'rgba(0,212,255,.9)':mj?'rgba(0,212,255,.35)':'rgba(0,212,255,.1)';
+    ctx.lineWidth=j===0?2:mj?1:.5;
+    ctx.beginPath(); ctx.moveTo(ox,y); ctx.lineTo(ox+cols*cell,y); ctx.stroke();
+    if(j>0&&(mj||rows<=12)){
+      ctx.fillStyle=mj?'rgba(0,212,255,.7)':'rgba(0,212,255,.3)';
+      ctx.font=`${mj?'bold ':''} 11px Courier Prime, monospace`;
+      ctx.textAlign='right'; ctx.fillText(j,ox-8,y+4);
+    }
+  }
+  ctx.strokeStyle='rgba(0,212,255,.9)'; ctx.lineWidth=2; ctx.fillStyle='rgba(0,212,255,.9)';
+  const xe=ox+cols*cell+18, ye=oy+rows*cell+18;
+  ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(xe,oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xe,oy-6); ctx.lineTo(xe+9,oy); ctx.lineTo(xe,oy+6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox,ye); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox-6,ye); ctx.lineTo(ox,ye+9); ctx.lineTo(ox+6,ye); ctx.fill();
+  ctx.font='bold 13px Courier Prime, monospace'; ctx.textAlign='center';
+  ctx.fillText('X',xe+15,oy+4); ctx.fillText('Y',ox,ye+20); ctx.fillText('0',ox-15,oy+5);
+}
+
+function launchImage(e) {
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const maxW=window.innerWidth-280, maxH=window.innerHeight-160;
+      let iw=img.width, ih=img.height;
+      if(iw>maxW){ih=ih*maxW/iw;iw=maxW;}
+      if(ih>maxH){iw=iw*maxH/ih;ih=maxH;}
+      iw=Math.round(iw); ih=Math.round(ih);
+      initApp(iw,ih); bCtx.drawImage(img,0,0,iw,ih);
+    };
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(f);
+}
+
+function initApp(w,h) {
+  S.cw=w; S.ch=h;
+  [baseC,iovC,arcC].forEach(c=>{
+    c.width=w; c.height=h;
+    c.style.width=w+'px'; c.style.height=h+'px';
+  });
+  ccon.style.width=w+'px'; ccon.style.height=h+'px';
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').classList.add('show');
+  setTimeout(rescale,80);
+  addLayer('Tracing Paper 1');
+  bindEvents();
+}
+
+function rescale() {
+  const area=document.getElementById('carea');
+  const aw=area.offsetWidth-32, ah=area.offsetHeight-32;
+  const sc=Math.min(aw/S.cw, ah/S.ch, 1);
+  ccon.style.transform=`scale(${sc})`;
+}
+window.addEventListener('resize', rescale);
+window.addEventListener('orientationchange',()=>setTimeout(rescale,250));
+
+// ── LAYERS ────────────────────────────────
+function addLayer(name) {
+  const id=++lid, lname=name||`Tracing Paper ${id}`;
+  const cv=document.createElement('canvas');
+  cv.className='layer-c'; cv.width=S.cw; cv.height=S.ch;
+  cv.style.width=S.cw+'px'; cv.style.height=S.ch+'px';
+  ccon.insertBefore(cv, arcC);
+  const layer={id,name:lname,cv,ctx:cv.getContext('2d'),paths:[],rot:0,px:S.cw/2,py:S.ch/2};
+  S.layers.push(layer);
+  setActive(id); renderList();
+}
+
+function deleteLayer(id) {
+  const i=S.layers.findIndex(l=>l.id===id); if(i<0) return;
+  S.layers[i].cv.remove(); S.layers.splice(i,1);
+  if(S.activeId===id) S.activeId=S.layers.length?S.layers[S.layers.length-1].id:null;
+  renderList(); updateStatus(); updatePivInd();
+}
+
+function setActive(id) {
+  S.activeId=id; renderList(); updateStatus(); updatePivInd();
+}
+function getActive() { return S.layers.find(l=>l.id===S.activeId)||null; }
+
+function renderList() {
+  const ll=document.getElementById('llist'); ll.innerHTML='';
+  [...S.layers].reverse().forEach(layer=>{
+    const d=document.createElement('div');
+    d.className='litem'+(layer.id===S.activeId?' active':'');
+    d.innerHTML=`
+      <div class="ldot"></div>
+      <input class="lname" value="${esc(layer.name)}" readonly
+        onfocus="this.removeAttribute('readonly')"
+        onblur="renameLayer(${layer.id},this.value);this.setAttribute('readonly',true)">
+      <span class="lrot">${Math.round(layer.rot)}°</span>
+      <button class="ldel" ontouchend="event.stopPropagation();deleteLayer(${layer.id})"
+              onclick="event.stopPropagation();deleteLayer(${layer.id})">✕</button>
+    `;
+    d.addEventListener('touchend',e=>{
+      if(e.target.tagName==='INPUT'||e.target.classList.contains('ldel')) return;
+      setActive(layer.id);
+    },{passive:true});
+    d.addEventListener('click',e=>{
+      if(e.target.tagName==='INPUT'||e.target.classList.contains('ldel')) return;
+      setActive(layer.id);
+    });
+    ll.appendChild(d);
+  });
+}
+
+function renameLayer(id,name){const l=S.layers.find(l=>l.id===id);if(l)l.name=name;updateStatus();}
+function togglePanel(){
+  S.panelOpen=!S.panelOpen;
+  document.getElementById('lpanel').classList.toggle('collapsed',!S.panelOpen);
+  document.getElementById('collapse-btn').textContent=S.panelOpen?'‹':'›';
+  setTimeout(rescale,240);
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function clamp(v,a,b){return Math.min(Math.max(v,a),b);}
+
+// ── TOOLS ────────────────────────────────
+function setTool(t){
+  S.tool=t;
+  document.querySelectorAll('.tbtn[id^="tb-"]').forEach(b=>b.classList.remove('active'));
+  const b=document.getElementById('tb-'+t); if(b)b.classList.add('active');
+
+  // hint text
+  if(t==='pivot'){
+    rotHint.textContent='TAP anywhere to place the pivot point';
+    rotHint.classList.add('show');
+  } else if(t==='rotate'){
+    rotHint.textContent='DRAG to rotate layer around the pivot';
+    rotHint.classList.add('show');
+  } else {
+    rotHint.classList.remove('show');
+  }
+
+  S.rotStart=null;
+  updatePivInd(); updateStatus();
+}
+
+// ── RENDER ───────────────────────────────
+function renderLayer(layer){
+  const ctx=layer.ctx; ctx.clearRect(0,0,S.cw,S.ch);
+  ctx.save();
+  ctx.translate(layer.px,layer.py); ctx.rotate(layer.rot*Math.PI/180); ctx.translate(-layer.px,-layer.py);
+  for(const p of layer.paths){
+    if(!p.pts||p.pts.length<2) continue;
+    ctx.beginPath();
+    ctx.globalCompositeOperation=p.eraser?'destination-out':'source-over';
+    ctx.strokeStyle=p.eraser?'rgba(0,0,0,1)':p.color;
+    ctx.lineWidth=p.size; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.moveTo(p.pts[0].x,p.pts[0].y);
+    for(let i=1;i<p.pts.length;i++) ctx.lineTo(p.pts[i].x,p.pts[i].y);
+    ctx.stroke(); ctx.globalCompositeOperation='source-over';
+  }
+  ctx.restore();
+}
+
+function drawArc(layer){
+  arcCtx.clearRect(0,0,S.cw,S.ch); if(!layer)return;
+  const cx=layer.px,cy=layer.py,r=46;
+  arcCtx.save();
+  arcCtx.strokeStyle='rgba(255,107,0,.45)'; arcCtx.lineWidth=1; arcCtx.setLineDash([5,5]);
+  arcCtx.beginPath(); arcCtx.arc(cx,cy,r,0,Math.PI*2); arcCtx.stroke();
+  arcCtx.setLineDash([]);
+  arcCtx.strokeStyle='rgba(255,107,0,.75)'; arcCtx.lineWidth=2;
+  const ang=layer.rot*Math.PI/180;
+  arcCtx.beginPath(); arcCtx.moveTo(cx,cy); arcCtx.lineTo(cx+Math.cos(ang)*r*1.5,cy+Math.sin(ang)*r*1.5); arcCtx.stroke();
+  arcCtx.restore();
+}
+
+// ── TOUCH/MOUSE COORDS ───────────────────
+function getPos(e){
+  const rect=iovC.getBoundingClientRect();
+  const t=e.touches?e.touches[0]:(e.changedTouches?e.changedTouches[0]:e);
+  const sx=S.cw/rect.width, sy=S.ch/rect.height;
+  return {x:(t.clientX-rect.left)*sx, y:(t.clientY-rect.top)*sy};
+}
+
+function toLocal(layer,x,y){
+  if(layer.rot===0) return {x,y};
+  const a=-layer.rot*Math.PI/180, dx=x-layer.px, dy=y-layer.py;
+  return {x:layer.px+dx*Math.cos(a)-dy*Math.sin(a), y:layer.py+dx*Math.sin(a)+dy*Math.cos(a)};
+}
+
+// ── EVENTS ───────────────────────────────
+function bindEvents(){
+  iovC.addEventListener('touchstart',onDown,{passive:false});
+  iovC.addEventListener('touchmove', onMove,{passive:false});
+  iovC.addEventListener('touchend',  onUp,  {passive:false});
+  iovC.addEventListener('mousedown', onDown);
+  iovC.addEventListener('mousemove', onMove);
+  iovC.addEventListener('mouseup',   onUp);
+  iovC.addEventListener('mouseleave',onLeave);
+}
+
+function onDown(e){
+  e.preventDefault();
+  const layer=getActive(); if(!layer)return;
+  const p=getPos(e);
+
+  if(S.tool==='annotate'||S.tool==='eraser'){
+    S.drawing=true;
+    const lp=toLocal(layer,p.x,p.y);
+    S.curPath={color:S.color,size:S.size,eraser:S.tool==='eraser',pts:[lp]};
+    layer.paths.push(S.curPath);
+
+  } else if(S.tool==='pivot'){
+    // Single tap — immediately place pivot, no drag needed
+    layer.px=p.x; layer.py=p.y;
+    renderLayer(layer); drawArc(layer); updatePivInd(); updateStatus();
+    // Confirm flash
+    rotHint.textContent='✓ Pivot placed — switch to ROTATE to spin';
+    rotHint.classList.add('show');
+    setTimeout(()=>{
+      if(S.tool==='pivot') rotHint.textContent='TAP anywhere to place the pivot point';
+    }, 2200);
+
+  } else if(S.tool==='rotate'){
+    // Start drag rotation
+    S.rotStart={
+      ang: Math.atan2(p.y-layer.py, p.x-layer.px),
+      baseRot: layer.rot,
+      sx:p.x, sy:p.y
+    };
+  }
+}
+
+function onMove(e){
+  e.preventDefault();
+  const layer=getActive(); if(!layer)return;
+  const p=getPos(e);
+
+  if((S.tool==='annotate'||S.tool==='eraser')&&S.drawing&&S.curPath){
+    const lp=toLocal(layer,p.x,p.y); S.curPath.pts.push(lp); renderLayer(layer);
+
+  } else if(S.tool==='rotate'&&S.rotStart){
+    layer.rot=S.rotStart.baseRot+(Math.atan2(p.y-layer.py,p.x-layer.px)-S.rotStart.ang)*180/Math.PI;
+    renderLayer(layer); drawArc(layer); updateStatus(); renderList();
+  }
+}
+
+function onUp(e){
+  e.preventDefault();
+  if(S.drawing){S.drawing=false;S.curPath=null;}
+  if(S.tool==='rotate'&&S.rotStart){ S.rotStart=null; }
+}
+
+function onLeave(){
+  if(S.drawing){S.drawing=false;S.curPath=null;}
+  S.rotStart=null;
+}
+
+// ── PIVOT ────────────────────────────────
+function updatePivInd(){
+  const layer=getActive();
+  const show = layer && (S.tool==='pivot'||S.tool==='rotate');
+  if(!show){pivInd.style.display='none'; if(S.tool!=='pivot'&&S.tool!=='rotate') arcCtx.clearRect(0,0,S.cw,S.ch); return;}
+  pivInd.style.display='block';
+  pivInd.style.left=layer.px+'px'; pivInd.style.top=layer.py+'px';
+  drawArc(layer);
+}
+
+// ── ACTIONS ──────────────────────────────
+function clearLayer(){const l=getActive();if(!l)return;l.paths=[];renderLayer(l);}
+function resetRot(){
+  const l=getActive();if(!l)return;
+  l.rot=0; renderLayer(l);
+  if(S.tool==='pivot'||S.tool==='rotate') drawArc(l);
+  else arcCtx.clearRect(0,0,S.cw,S.ch);
+  updatePivInd(); updateStatus(); renderList();
+}
+
+// ── STATUS ───────────────────────────────
+function updateStatus(){
+  const l=getActive();
+  document.getElementById('st-tool').textContent=S.tool.toUpperCase();
+  document.getElementById('st-layer').textContent=l?l.name:'—';
+  document.getElementById('st-rot').textContent=l?Math.round(l.rot)+'°':'0°';
+  document.getElementById('st-piv').textContent=l?`${Math.round(l.px)}, ${Math.round(l.py)}`:'—';
+}
+
+// ── CONTROLS ─────────────────────────────
+document.getElementById('ink-color').addEventListener('input',e=>S.color=e.target.value);
+document.getElementById('ink-size').addEventListener('input',e=>{
+  S.size=+e.target.value;
+  document.getElementById('size-lbl').textContent=S.size;
+});
+document.getElementById('carea').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+updateStatus();
+</script>
+</body>
+</html>
