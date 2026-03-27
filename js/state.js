@@ -5,5 +5,7 @@ export const state = {
     currentFolderId: null,
     breadcrumbs: [],
     currentItems: [],
-    sortableInstance: null
+    sortableInstance: null,
+    isSelectionMode: false,
+    selectedItems: []
 };

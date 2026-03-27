@@ -3,9 +3,9 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
-import { renderAdminHome, renderApprovals, approveUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js?v=8";
+import { renderAdminHome, renderApprovals, approveUser, rejectUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js?v=8";
 import { renderStudentDashboard } from "./student.js?v=2";
-import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal } from "./dashboard_v9.js?v=FIX_FINAL_V2";
+import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal, toggleItemState, toggleSelectionMode, toggleCardSelection, handleBulkAction, openDestinationModal, closeDestinationModal, confirmDestinationAction } from "./dashboard_v9.js?v=FIX_FINAL_V2";
 import { showToast } from "./utils_v7.js";
 
 // --- EXPOSE GLOBAL FUNCTIONS (Bridge for HTML onclick) ---
@@ -13,6 +13,7 @@ window.switchTab = switchTab;
 window.renderAdminHome = renderAdminHome;
 window.renderApprovals = renderApprovals;
 window.approveUser = approveUser;
+window.rejectUser = rejectUser;
 window.openModalForCreate = openModalForCreate;
 window.openModalForEdit = openModalForEdit;
 window.handleSaveCourse = handleSaveCourse;
@@ -28,12 +29,21 @@ window.openContentModal = openContentModal;
 window.openEditContentModal = openEditContentModal;
 window.handleSaveContent = handleSaveContent;
 window.deleteContent = deleteContent;
+window.toggleItemState = toggleItemState;
 window.toggleSettingsModal = toggleSettingsModal;
 window.saveSettings = saveSettings;
 window.openFileViewer = openFileViewer;
 window.closeFileViewer = closeFileViewer;
 window._closeViewerInternal = _closeViewerInternal;
 window.deleteStudentAccount = deleteStudentAccount;
+
+// Bulk Action Modals and Selection Mode
+window.toggleSelectionMode = toggleSelectionMode;
+window.toggleCardSelection = toggleCardSelection;
+window.handleBulkAction = handleBulkAction;
+window.openDestinationModal = openDestinationModal;
+window.closeDestinationModal = closeDestinationModal;
+window.confirmDestinationAction = confirmDestinationAction;
 
 window.renderCourseSelection = renderCourseSelection;
 

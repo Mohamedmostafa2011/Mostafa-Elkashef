@@ -1,3 +1,5 @@
+import { state } from "./state.js";
+
 export function showToast(msg, type = 'success') {
     const el = document.createElement('div');
     el.className = `${type === 'error' ? 'bg-red-500' : 'bg-green-600'} text-white px-6 py-3.5 rounded-xl shadow-2xl font-bold fade-in z-[100]`;
@@ -80,7 +82,7 @@ export function generateAttachmentsHtml(attachments, title = "") {
 }
 
 export function generateVideoCardHtml(item, isAdmin) {
-    const dragHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-20 cursor-grab text-white/80 hover:text-white drop-shadow-md bg-black/20 p-1.5 rounded-lg touch-action-none"><i class="fas fa-grip-vertical text-sm"></i></div>` : '';
+    const dragHandle = isAdmin ? `<div class="drag-handle absolute top-2 left-2 z-50 cursor-grab text-white/80 hover:text-white drop-shadow-md bg-black/40 p-2 rounded-lg touch-action-none"><i class="fas fa-grip-vertical text-sm"></i></div>` : '';
 
     const isFolder = item.type === 'folder' || item.type === 'file_folder';
 
@@ -164,16 +166,46 @@ export function generateVideoCardHtml(item, isAdmin) {
             </div>`;
         }
 
+        let statusBadges = '';
+        if (isAdmin && (item.isLocked || item.isHidden)) {
+            statusBadges = `<div class="absolute bottom-3 right-3 z-30 flex gap-2">`;
+            if (item.isLocked) statusBadges += `<span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md"><i class="fas fa-lock"></i> Locked</span>`;
+            if (item.isHidden) statusBadges += `<span class="bg-purple-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md"><i class="fas fa-eye-slash"></i> Hidden</span>`;
+            statusBadges += `</div>`;
+        }
+
+        let studentLockOverlay = (!isAdmin && item.isLocked) ? `
+            <div class="absolute inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center rounded-[2rem]">
+                <div class="bg-white/10 p-4 rounded-full border border-white/20 shadow-2xl backdrop-blur-md">
+                    <i class="fas fa-lock text-white text-3xl"></i>
+                </div>
+            </div>` : '';
+
+        const isSelected = state.isSelectionMode && state.selectedItems.includes(item.id);
+        const selectionOverlay = isSelected ? `
+            <div class="absolute inset-0 z-[100] bg-brand-primary/20 backdrop-blur-[2px] border-4 border-brand-primary rounded-[2rem] pointer-events-none flex items-center justify-center">
+                <div class="w-16 h-16 bg-brand-primary text-white rounded-full flex items-center justify-center text-3xl shadow-2xl animate-bounce-short">
+                    <i class="fas fa-check"></i>
+                </div>
+            </div>` : '';
+
+        const folderClickHandler = state.isSelectionMode ? `window.toggleCardSelection('${item.id}'); event.stopPropagation();` : (!isAdmin && item.isLocked ? `window.showToast('This folder is locked by the admin', 'error'); event.stopPropagation();` : `window.navigateToFolder('${item.id}', null, '${item.title.replace(/'/g, "\\'")}')`);
+
         return `
-        <div data-id="${item.id}" onclick="window.navigateToFolder('${item.id}', null, '${item.title}')" class="group relative w-full aspect-[4/3] md:aspect-square bg-slate-900 rounded-[2rem] overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 border border-slate-800 selection:bg-transparent">
+        <div data-id="${item.id}" onclick="${folderClickHandler}" class="group relative w-full aspect-[4/3] md:aspect-square bg-slate-900 rounded-[2rem] overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 border ${isSelected ? 'border-brand-primary shadow-brand-primary/30' : 'border-slate-800'} selection:bg-transparent">
             
             ${folderHandle}
             
             ${folderThumbnailHtml}
+            ${studentLockOverlay}
+            ${statusBadges}
+            ${selectionOverlay}
 
             <!-- Admin Actions -->
             ${isAdmin ? `
             <div class="absolute top-3 right-3 flex gap-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-md rounded-xl p-1 border border-white/10" onclick="event.stopPropagation()">
+                <button onclick="window.toggleItemState('${item.id}', 'isLocked', ${item.isLocked || false}); event.stopPropagation();" class="w-8 h-8 rounded-lg text-slate-200 hover:text-amber-500 hover:bg-white/20 flex items-center justify-center transition" title="${item.isLocked ? 'Unlock' : 'Lock'}"><i class="fas ${item.isLocked ? 'fa-lock text-amber-500' : 'fa-unlock'} text-xs"></i></button>
+                <button onclick="window.toggleItemState('${item.id}', 'isHidden', ${item.isHidden || false}); event.stopPropagation();" class="w-8 h-8 rounded-lg text-slate-200 hover:text-purple-400 hover:bg-white/20 flex items-center justify-center transition" title="${item.isHidden ? 'Unhide' : 'Hide'}"><i class="fas ${item.isHidden ? 'fa-eye-slash text-purple-400' : 'fa-eye'} text-xs"></i></button>
                 <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="w-8 h-8 rounded-lg text-slate-200 hover:text-white hover:bg-white/20 flex items-center justify-center transition"><i class="fas fa-pencil-alt text-xs"></i></button>
                 <button onclick="window.deleteContent('${item.id}', '${item.section || 'content'}')" class="w-8 h-8 rounded-lg text-red-300 hover:text-red-400 hover:bg-white/20 flex items-center justify-center transition"><i class="fas fa-trash text-xs"></i></button>
             </div>` : ''}
@@ -311,10 +343,39 @@ export function generateVideoCardHtml(item, isAdmin) {
         const safeUrl = videoUrl.replace(/'/g, "\\'");
         const isDynamic = !!(topicNo && topicTitle);
 
+        let fileStatusBadges = '';
+        if (isAdmin && (item.isLocked || item.isHidden)) {
+            fileStatusBadges = `<div class="absolute top-3 inset-x-0 flex justify-center z-40 pointer-events-none fade-in">
+                <div class="flex gap-2">`;
+            if (item.isLocked) fileStatusBadges += `<span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg border border-white/20"><i class="fas fa-lock"></i> Locked</span>`;
+            if (item.isHidden) fileStatusBadges += `<span class="bg-purple-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg border border-white/20"><i class="fas fa-eye-slash"></i> Hidden</span>`;
+            fileStatusBadges += `</div></div>`;
+        }
+
+        let studentFileLockOverlay = (!isAdmin && item.isLocked) ? `
+            <div class="absolute inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
+                <div class="bg-white/10 p-3 rounded-full border border-white/20 shadow-2xl backdrop-blur-md">
+                    <i class="fas fa-lock text-white text-2xl"></i>
+                </div>
+            </div>` : '';
+
+        const isSelected = state.isSelectionMode && state.selectedItems.includes(item.id);
+        const selectionOverlay = isSelected ? `
+            <div class="absolute inset-0 z-[100] bg-brand-primary/20 backdrop-blur-[2px] border-4 border-brand-primary rounded-2xl pointer-events-none flex items-center justify-center">
+                <div class="w-16 h-16 bg-brand-primary text-white rounded-full flex items-center justify-center text-3xl shadow-2xl animate-bounce-short">
+                    <i class="fas fa-check"></i>
+                </div>
+            </div>` : '';
+
+        const fileClickHandler = state.isSelectionMode ? `window.toggleCardSelection('${item.id}'); event.stopPropagation();` : (!isAdmin && item.isLocked ? `window.showToast('This item is locked by the admin', 'error'); event.stopPropagation();` : `window.openFileViewer('${safeUrl}', '${isFile ? 'file' : 'video'}')`);
+
         let contentDisplay = `
-        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden" onclick="window.openFileViewer('${safeUrl}', '${isFile ? 'file' : 'video'}')">
+        <div class="aspect-video bg-slate-900 relative group/video cursor-pointer overflow-hidden leading-zero" onclick="${fileClickHandler}">
             <!-- Dynamic Thumbnail -->
             ${thumbnailHtml}
+            ${dragHandle}
+            ${fileStatusBadges}
+            ${studentFileLockOverlay}
 
             <!-- Play/View Button Overlay -->
             <div class="absolute inset-0 flex items-center justify-center z-30">
@@ -325,7 +386,7 @@ export function generateVideoCardHtml(item, isAdmin) {
             
             <!-- Metadata Badge -->
             ${!isDynamic && !isFile ? `
-            <div class="absolute top-3 left-3 z-20">
+            <div class="absolute bottom-3 right-3 z-30">
                 <span class="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-md border border-white/10 uppercase tracking-widest leading-none flex items-center gap-1">
                     <i class="fas ${isYouTube ? 'fa-youtube text-red-500' : 'fa-play-circle text-brand-primary'} text-[10px]"></i>
                     ${isYouTube ? 'YouTube' : 'Video'}
@@ -333,7 +394,7 @@ export function generateVideoCardHtml(item, isAdmin) {
             </div>` : ''}
 
             ${attachments.length > 1 ? `
-            <div class="absolute top-3 right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-white/20 uppercase tracking-widest leading-none z-20">
+            <div class="absolute top-3 right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-white/20 uppercase tracking-widest leading-none z-30">
                 +${attachments.length - 1} Files
             </div>` : ''}
 
@@ -344,9 +405,9 @@ export function generateVideoCardHtml(item, isAdmin) {
         </div>`;
 
         return `
-        <div data-id="${item.id}" class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative">
-            ${dragHandle}
+        <div data-id="${item.id}" onclick="${state.isSelectionMode ? `window.toggleCardSelection('${item.id}')` : ''}" class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm border ${isSelected ? 'border-brand-primary shadow-brand-primary/30' : 'border-slate-100 dark:border-slate-700'} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative ${state.isSelectionMode ? 'cursor-pointer' : ''}">
             ${contentDisplay}
+            ${selectionOverlay}
             <div class="p-5">
                 <div class="flex justify-between items-start gap-3">
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">
@@ -354,8 +415,11 @@ export function generateVideoCardHtml(item, isAdmin) {
                     </h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
-                        <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                        <button onclick="window.deleteContent('${item.id}', '${item.section || 'content'}')" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                        <button onclick="window.toggleItemState('${item.id}', 'isLocked', ${item.isLocked || false}); event.stopPropagation();" class="text-slate-300 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="${item.isLocked ? 'Unlock' : 'Lock'}"><i class="fas ${item.isLocked ? 'fa-lock text-amber-500' : 'fa-unlock'} text-xs"></i></button>
+                        <button onclick="window.toggleItemState('${item.id}', 'isHidden', ${item.isHidden || false}); event.stopPropagation();" class="text-slate-300 hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="${item.isHidden ? 'Unhide' : 'Hide'}"><i class="fas ${item.isHidden ? 'fa-eye-slash text-purple-400' : 'fa-eye'} text-xs"></i></button>
+
+                        <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                        <button onclick="window.deleteContent('${item.id}', '${item.section || 'content'}')" class="text-slate-300 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
                     </div>` : ''}
                 </div>
                 

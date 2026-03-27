@@ -167,6 +167,8 @@ export async function renderTab(tabName, fromHistory = false) {
         history.pushState({ tab: tabName }, "", `#${tabName}`);
     }
     state.activeTab = tabName; // Track active tab for navigation
+    state.isSelectionMode = false;
+    state.selectedItems = [];
     withViewTransition(async () => {
         _renderTabInternal(tabName);
     });
@@ -404,6 +406,11 @@ async function _renderTabInternal(tabName) {
                 } else {
                     if (data.parentId !== state.currentFolderId) return;
                 }
+                
+                if (state.currentUserData.role !== 'admin' && data.isHidden) {
+                    return;
+                }
+                
                 items.push({ id: d.id, ...data });
             });
 
@@ -444,6 +451,21 @@ async function _renderTabInternal(tabName) {
             const conf = sectionConfig[tabName] || { title: 'Section', icon: 'fa-folder' };
             const sectionTitle = state.currentFolderId ? 'Folder Contents' : conf.title;
 
+            let floatingToolbar = '';
+            if (isAdmin && state.isSelectionMode) {
+                const count = state.selectedItems.length;
+                floatingToolbar = `
+                <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-white dark:bg-slate-900 shadow-2xl rounded-full border border-slate-200 dark:border-slate-700 p-2 flex items-center gap-2 animate-bounce-short backdrop-blur-md">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full whitespace-nowrap">${count} Selected</span>
+                    
+                    <button onclick="window.handleBulkAction('hide')" class="w-10 h-10 flex items-center justify-center bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-full font-bold transition" title="Hide/Unhide"><i class="fas fa-eye-slash"></i></button>
+                    <button onclick="window.handleBulkAction('lock')" class="w-10 h-10 flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-full font-bold transition" title="Lock/Unlock"><i class="fas fa-lock"></i></button>
+                    <button onclick="window.handleBulkAction('copy')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-full font-bold transition" title="Copy"><i class="fas fa-copy"></i></button>
+                    <button onclick="window.handleBulkAction('move')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-full font-bold transition" title="Move"><i class="fas fa-arrow-right"></i></button>
+                    <button onclick="window.handleBulkAction('delete')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded-full font-bold transition" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>`;
+            }
+
             contentHtml = `
                 ${breadcrumbHtml}
                 <div class="flex flex-col md:flex-row justify-between items-center mb-8 fade-in gap-4 bg-transparent py-2">
@@ -455,10 +477,16 @@ async function _renderTabInternal(tabName) {
                     <div class="flex gap-2 w-full md:w-auto items-center">
                         <div class="relative flex-1 md:w-64">
                             <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                            <input type="text" oninput="window.filterVideoItems(this.value)" placeholder="Search..." class="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:border-brand-primary outline-none focus:ring-4 focus:ring-brand-primary/5 transition">
+                            <input type="text" oninput="window.filterVideoItems(this.value)" placeholder="Search..." class="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:border-brand-primary outline-none focus:ring-4 focus:ring-brand-primary/5 transition" ${state.isSelectionMode ? 'disabled opacity-50' : ''}>
                         </div>
                     
                         ${isAdmin ? `
+                        <button onclick="window.toggleSelectionMode()" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${state.isSelectionMode ? 'bg-brand-primary text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'} shrink-0">
+                            ${state.isSelectionMode ? 'Cancel' : 'Select'}
+                        </button>
+                        ` : ''}
+
+                        ${isAdmin && !state.isSelectionMode ? `
                         <div class="flex gap-2 shrink-0">
                             <!-- New Folder -->
                             <button onclick="window.openContentModal('folder', '${tabName}')" class="h-10 w-10 flex items-center justify-center bg-amber-50 text-amber-600 rounded-xl font-bold hover:bg-amber-100 transition border border-amber-100" title="New Folder"><i class="fas fa-folder-plus"></i></button>
@@ -477,6 +505,8 @@ async function _renderTabInternal(tabName) {
                         <div class="w-20 h-20 bg-slate-50 dark:bg-slate-700/50 rounded-full flex items-center justify-center text-slate-300 mb-4 text-3xl"><i class="fas fa-wind"></i></div>
                         <p class="text-slate-500 font-bold">This section is empty.</p>
                     </div>`}
+                
+                ${floatingToolbar}
             `;
             container.innerHTML = header + contentHtml;
             if (isAdmin && items.length > 0) initSortable();
@@ -491,6 +521,8 @@ async function _renderTabInternal(tabName) {
 
 
 export function navigateToFolder(id, breadcrumbIndex = null, title = null, fromHistory = false) {
+    state.isSelectionMode = false;
+    state.selectedItems = [];
     if (!fromHistory) {
         const currentTab = state.activeTab || 'content';
         history.pushState({ tab: currentTab, folderId: id, folderTitle: title }, "", `#${currentTab}${id ? '/' + id : ''}`);
@@ -576,6 +608,20 @@ export function toggleSettingsModal() {
 
 export function saveSettings() {
     console.log("Settings save removed.");
+}
+
+export async function toggleItemState(id, field, currentValue) {
+    if (state.currentUserData.role !== 'admin') return;
+    try {
+        const newValue = !currentValue;
+        const ref = doc(db, "course_content", id);
+        await updateDoc(ref, { [field]: newValue });
+        showToast(`Item ${field === 'isLocked' ? (newValue ? 'Locked' : 'Unlocked') : (newValue ? 'Hidden' : 'Visible')}`, "success");
+        _renderTabInternal(state.activeTab || 'content');
+    } catch (e) {
+        console.error("Error toggling state:", e);
+        showToast("Error updating item state.", "error");
+    }
 }
 
 // --- FILE VIEWER FUNCTIONS ---
@@ -693,7 +739,7 @@ export function openFileViewer(url, type = 'file') {
         content.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Preview">`;
     }
     else if (fileType === 'video') {
-        content.innerHTML = `<video controls autoplay class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
+        content.innerHTML = `<video controls controlsList="nodownload" autoplay class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
                     <source src="${url}">
                     Your browser does not support the video tag.
                 </video>`;
@@ -985,5 +1031,231 @@ export async function deleteContent(id, section) {
     } catch (e) {
         console.error(e);
         showToast("Error deleting item", "error");
+    }
+}
+
+// --- BULK ACTION LOGIC ---
+export function toggleSelectionMode() {
+    state.isSelectionMode = !state.isSelectionMode;
+    state.selectedItems = [];
+    _renderTabInternal(state.activeTab || 'content');
+}
+
+export function toggleCardSelection(id) {
+    if (!state.isSelectionMode) return;
+    const idx = state.selectedItems.indexOf(id);
+    if (idx > -1) {
+        state.selectedItems.splice(idx, 1);
+    } else {
+        state.selectedItems.push(id);
+    }
+    _renderTabInternal(state.activeTab || 'content');
+}
+
+export async function handleBulkAction(action) {
+    if (!state.selectedItems || state.selectedItems.length === 0) {
+        showToast("No items selected.", "error");
+        return;
+    }
+
+    if (action === 'delete') {
+        if (!confirm(`Are you sure you want to delete ${state.selectedItems.length} selected items?`)) return;
+        try {
+            const batch = writeBatch(db);
+            state.selectedItems.forEach(id => {
+                batch.delete(doc(db, "course_content", id));
+            });
+            await batch.commit();
+            showToast("Selected items deleted.", "success");
+            toggleSelectionMode();
+        } catch (e) {
+            console.error(e);
+            showToast("Error deleting items.", "error");
+        }
+    } else if (action === 'hide' || action === 'lock') {
+        const field = action === 'hide' ? 'isHidden' : 'isLocked';
+        try {
+            const toUpdate = state.currentItems.filter(i => state.selectedItems.includes(i.id));
+            const allSet = toUpdate.every(i => i[field] === true);
+            const newValue = !allSet;
+
+            const batch = writeBatch(db);
+            state.selectedItems.forEach(id => {
+                batch.update(doc(db, "course_content", id), { [field]: newValue });
+            });
+            await batch.commit();
+            showToast(`Items ${newValue ? (action === 'hide' ? 'Hidden' : 'Locked') : (action === 'hide' ? 'Visible' : 'Unlocked')}`, "success");
+            toggleSelectionMode();
+        } catch(e) {
+            console.error(e);
+            showToast("Error updating items.", "error");
+        }
+    } else if (action === 'copy' || action === 'move') {
+        window.bulkActionType = action;
+        openDestinationModal();
+    }
+}
+
+function getDestinationModalHtml() {
+    return `
+        <div id="destination-modal" class="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm shadow-2xl transition-opacity animate-fade-in hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] flex flex-col relative overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white" id="dest-modal-title">Select Destination</h2>
+                    <button onclick="window.closeDestinationModal()" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Target Course</label>
+                        <select id="dest-course" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-brand-primary transition">
+                            <option value="">Select a course...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Target Section</label>
+                        <select id="dest-section" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-brand-primary transition">
+                            <option value="content">Content</option>
+                            <option value="homework">Homework Assignments</option>
+                            <option value="summary">Summaries</option>
+                            <option value="classified">Classified Questions</option>
+                            <option value="revision">Final Revision</option>
+                            <option value="papers">Past Papers</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Target Folder (Optional)</label>
+                        <select id="dest-folder" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-brand-primary transition">
+                            <option value="">Root (No Folder)</option>
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-2 font-bold uppercase"><i class="fas fa-info-circle mr-1"></i>Folders load after selecting course and section.</p>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-100 dark:border-slate-700 mt-6 flex justify-end gap-3">
+                    <button onclick="window.closeDestinationModal()" class="px-5 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition">Cancel</button>
+                    <button onclick="window.confirmDestinationAction()" class="px-5 py-2.5 rounded-xl font-bold bg-brand-primary text-white shadow-lg hover:shadow-brand-primary/30 transition-all active:scale-95" id="dest-confirm-btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+export function openDestinationModal() {
+    let modal = document.getElementById('destination-modal');
+    if (!modal) {
+        document.body.insertAdjacentHTML('beforeend', getDestinationModalHtml());
+        modal = document.getElementById('destination-modal');
+        setupDestinationListeners();
+    }
+    
+    document.getElementById('dest-modal-title').textContent = window.bulkActionType === 'move' ? 'Move Items To' : 'Copy Items To';
+    document.getElementById('dest-confirm-btn').textContent = window.bulkActionType === 'move' ? 'Move' : 'Copy';
+
+    const courseSelect = document.getElementById('dest-course');
+    courseSelect.innerHTML = '<option value="">Select a course...</option>' + 
+        state.availableCourses.map(c => `<option value="${c.id}">${c.title} ${c.subcode && c.subcode !== 'null' ? `(${c.subcode})` : ''}</option>`).join('');
+    
+    if(state.activeCourseContext && state.activeCourseContext.id) {
+        courseSelect.value = state.activeCourseContext.id;
+    }
+    
+    document.getElementById('dest-section').value = state.activeTab || 'content';
+    
+    loadDestinationFolders();
+
+    modal.classList.remove('hidden');
+}
+
+export function closeDestinationModal() {
+    const modal = document.getElementById('destination-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function setupDestinationListeners() {
+    document.getElementById('dest-course').addEventListener('change', loadDestinationFolders);
+    document.getElementById('dest-section').addEventListener('change', loadDestinationFolders);
+}
+
+async function loadDestinationFolders() {
+    const courseId = document.getElementById('dest-course').value;
+    const section = document.getElementById('dest-section').value;
+    const folderSelect = document.getElementById('dest-folder');
+    
+    folderSelect.innerHTML = '<option value="">Root (No Folder)</option>';
+    if (!courseId) return;
+
+    try {
+        const q = query(collection(db, "course_content"), 
+            where("courseId", "==", courseId), 
+            where("type", "in", ["folder", "file_folder"]),
+            where("section", "==", section)
+        );
+        const sn = await getDocs(q);
+        const folders = sn.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=> (a.order||0) - (b.order||0));
+        folders.forEach(f => {
+            folderSelect.innerHTML += `<option value="${f.id}">${f.title}</option>`;
+        });
+    } catch (e) {
+        console.error("Error loading folders", e);
+    }
+}
+
+export async function confirmDestinationAction() {
+    const action = window.bulkActionType;
+    const courseId = document.getElementById('dest-course').value;
+    const section = document.getElementById('dest-section').value;
+    const parentId = document.getElementById('dest-folder').value || null;
+
+    if (!courseId) {
+        showToast("Please select a target course.", "error");
+        return;
+    }
+
+    const btn = document.getElementById('dest-confirm-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+    try {
+        const toUpdate = state.currentItems.filter(i => state.selectedItems.includes(i.id));
+        const batch = writeBatch(db);
+
+        if (action === 'move') {
+            toUpdate.forEach(item => {
+                const ref = doc(db, "course_content", item.id);
+                batch.update(ref, {
+                    courseId: courseId,
+                    section: section,
+                    parentId: parentId
+                });
+            });
+            await batch.commit();
+            showToast("Items moved successfully.", "success");
+        } else if (action === 'copy') {
+            toUpdate.forEach(item => {
+                const newData = { ...item };
+                delete newData.id;
+                newData.courseId = courseId;
+                newData.section = section;
+                newData.parentId = parentId;
+                newData.createdAt = new Date().toISOString();
+                const newRef = doc(collection(db, "course_content"));
+                batch.set(newRef, newData);
+            });
+            await batch.commit();
+            showToast("Items copied successfully.", "success");
+        }
+
+        closeDestinationModal();
+        toggleSelectionMode();
+    } catch (e) {
+        console.error(e);
+        showToast("Error processing bulk action.", "error");
+    } finally {
+        closeDestinationModal();
+        btn.disabled = false;
+        btn.innerHTML = action === 'move' ? 'Move' : 'Copy';
     }
 }

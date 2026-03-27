@@ -115,7 +115,10 @@ export async function renderApprovals() {
                     ${u.subcourseCode ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold">Group: ${u.subcourseCode}</span>` : ''}
                 </div>
             </div>
-            <button onclick="window.approveUser('${d.id}')" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-green-100">Approve</button>
+            <div class="flex gap-2 w-full sm:w-auto mt-3 sm:mt-0">
+                <button onclick="window.rejectUser('${d.id}')" class="flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 px-6 py-2 rounded-xl text-sm font-bold transition-colors border border-red-100">Reject</button>
+                <button onclick="window.approveUser('${d.id}')" class="flex-1 sm:flex-none bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-green-100 transition-all">Approve</button>
+            </div>
         </div>`;
     });
     html += `</div></div>`;
@@ -126,6 +129,17 @@ export async function approveUser(uid) {
     await updateDoc(doc(db, "users", uid), { status: 'approved' });
     showToast("Approved");
     renderApprovals();
+}
+
+export async function rejectUser(uid) {
+    if (!confirm("Are you sure you want to reject this request? The user account will be permanently deleted.")) return;
+    try {
+        await deleteDoc(doc(db, "users", uid));
+        showToast("User rejected");
+        renderApprovals();
+    } catch (e) {
+        showToast("Error rejecting user", "error");
+    }
 }
 
 export async function deleteStudentAccount(uid, name) {
