@@ -53,6 +53,9 @@ window.switchToCourseSelection = () => {
     renderCourseSelection(courseIds);
 };
 
+// Map missing profile click handler to Course Hub navigation
+window.handleHeaderProfileClick = window.switchToCourseSelection;
+
 // Sidebar Toggles
 document.getElementById('open-sidebar').onclick = () => { document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('mobile-overlay').classList.remove('hidden'); };
 document.getElementById('close-sidebar').onclick = () => { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('mobile-overlay').classList.add('hidden'); };

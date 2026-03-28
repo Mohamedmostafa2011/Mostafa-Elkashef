@@ -9,6 +9,16 @@ export function showToast(msg, type = 'success') {
     setTimeout(() => el.remove(), 4000);
 }
 
+export function escapeHTML(str) {
+    if (!str) return "";
+    return str.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 export function setupSubcourseInputs(codes) {
     const container = document.getElementById('subcourse-container');
     container.innerHTML = '';
@@ -41,12 +51,12 @@ export function generateAttachmentsHtml(attachments, title = "") {
 
     attachments.forEach(att => {
         const isVideo = att.type === 'video' || att.url.match(/\.(mp4|webm|ogg)$/i);
-        const name = att.name || "Attachment";
+        const name = escapeHTML(att.name || "Attachment");
 
         if (isVideo) {
             html += `
             <div class="rounded-xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm group/video relative">
-                <video src="${att.url}" class="w-full aspect-video block bg-black" controls playsinline controlsList="nodownload"></video>
+                <video src="${att.url}" class="w-full aspect-video block bg-black" controls playsinline controlsList="nodownload" oncontextmenu="return false;"></video>
                 <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-md font-bold border border-white/10 opacity-0 group-hover/video:opacity-100 transition-opacity uppercase tracking-wider">${name}</div>
             </div>`;
         } else {
@@ -112,14 +122,14 @@ export function generateVideoCardHtml(item, isAdmin) {
                         <!-- 1. Topic/Folder Badge (Index) -->
                         <div class="relative">
                             <div class="bg-gradient-to-r from-amber-500 to-yellow-500 px-5 py-1.5 rounded-xl text-[11px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-amber-500/20 border border-white/20 backdrop-blur-md flex items-center gap-2">
-                                <i class="fas fa-folder-open"></i> ${topicNo}
+                                <i class="fas fa-folder-open"></i> ${escapeHTML(topicNo)}
                             </div>
                         </div>
                         
                         <!-- 3. Main Title (Centered vertically) -->
                         <div class="flex-1 flex items-center justify-center py-4">
                             <h3 class="text-white text-3xl md:text-5xl font-black leading-snug selection:bg-amber-500 tracking-tight drop-shadow-2xl px-2">
-                                ${item.title}
+                                ${escapeHTML(item.title)}
                             </h3>
                         </div>
         
@@ -161,8 +171,8 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <div class="absolute top-[-8px] left-[-8px] w-20 h-20 bg-white/5 rounded-2xl border border-white/10 transform rotate-[-6deg] group-hover:rotate-[-12deg] transition-all duration-300"></div>
                 </div>
                 
-                <h4 class="text-xl font-bold text-white text-center leading-tight line-clamp-2 drop-shadow-lg group-hover:text-amber-200 transition-colors">${item.title}</h4>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 border border-white/10 px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-md group-hover:bg-amber-500/20 group-hover:text-amber-200 transition-all">${item.section ? item.section.toUpperCase() : 'FOLDER'}</p>
+                <h4 class="text-xl font-bold text-white text-center leading-tight line-clamp-2 drop-shadow-lg group-hover:text-amber-200 transition-colors">${escapeHTML(item.title)}</h4>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 border border-white/10 px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-md group-hover:bg-amber-500/20 group-hover:text-amber-200 transition-all">${escapeHTML(item.section ? item.section.toUpperCase() : 'FOLDER')}</p>
             </div>`;
         }
 
@@ -250,14 +260,14 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <!-- 1. Topic Index (Badge) -->
                 <div class="relative">
                     <div class="bg-gradient-to-r from-emerald-500 to-green-500 px-5 py-1.5 rounded-xl text-[11px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 border border-white/20 backdrop-blur-md flex items-center gap-2">
-                        <i class="fas fa-file-alt"></i> ${topicNo}
+                        <i class="fas fa-file-alt"></i> ${escapeHTML(topicNo)}
                     </div>
                 </div>
                 
                 <!-- 2. Topic Title (Centered vertically) -->
                 <div class="flex-1 flex items-center justify-center py-4">
                     <h4 class="text-white text-3xl md:text-5xl font-black uppercase tracking-widest drop-shadow-2xl">
-                        ${topicTitle}
+                        ${escapeHTML(topicTitle)}
                     </h4>
                 </div>
 
@@ -281,14 +291,14 @@ export function generateVideoCardHtml(item, isAdmin) {
                 <!-- 1. Topic Badge -->
                 <div class="relative">
                     <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-1.5 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 border border-white/20 backdrop-blur-md">
-                        ${topicNo}
+                        ${escapeHTML(topicNo)}
                     </div>
                 </div>
 
                 <!-- 2. Topic Title (Centered vertically) -->
                 <div class="flex-1 flex items-center justify-center py-4">
                     <h4 class="text-white text-3xl md:text-5xl font-black uppercase tracking-widest drop-shadow-2xl">
-                        ${topicTitle}
+                        ${escapeHTML(topicTitle)}
                     </h4>
                 </div>
 
@@ -324,7 +334,7 @@ export function generateVideoCardHtml(item, isAdmin) {
             <div class="absolute inset-0 bg-black/10"></div>`;
         } else if (videoUrl && !isFile) {
             thumbnailHtml = `
-            <video src="${videoUrl}#t=0.1" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline></video>
+            <video src="${videoUrl}#t=0.1" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline oncontextmenu="return false;"></video>
             <div class="absolute inset-0 bg-black/10"></div>`;
         } else if (isFile) {
             // Generic File Thumbnail
@@ -400,7 +410,7 @@ export function generateVideoCardHtml(item, isAdmin) {
 
             <!-- Bottom Title Overlay (Visible on Hover) -->
             <div class="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
-                <p class="text-white text-[11px] font-bold uppercase tracking-wider line-clamp-1">${item.title}</p>
+                <p class="text-white text-[11px] font-bold uppercase tracking-wider line-clamp-1">${escapeHTML(item.title)}</p>
             </div>
         </div>`;
 
@@ -411,7 +421,7 @@ export function generateVideoCardHtml(item, isAdmin) {
             <div class="p-5">
                 <div class="flex justify-between items-start gap-3">
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 line-clamp-2 text-sm leading-tight flex-1">
-                        ${item.title}
+                        ${escapeHTML(item.title)}
                     </h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
@@ -429,7 +439,7 @@ export function generateVideoCardHtml(item, isAdmin) {
                     <div class="flex flex-wrap gap-2">
                         ${attachments.slice(1).map(att => `
                             <button onclick="window.openFileViewer('${att.url.replace(/'/g, "\\'")}', 'file')" class="text-[10px] font-bold bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:border-brand-primary transition-colors truncate max-w-[120px]">
-                                <i class="fas ${att.type === 'video' ? 'fa-play-circle text-brand-primary' : 'fa-file'} mr-1"></i> ${att.name}
+                                <i class="fas ${att.type === 'video' ? 'fa-play-circle text-brand-primary' : 'fa-file'} mr-1"></i> ${escapeHTML(att.name)}
                             </button>
                         `).join('')}
                     </div>

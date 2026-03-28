@@ -94,6 +94,10 @@ function handleCourseSelectionChange() {
 }
 
 async function handleLogin() {
+    const btn = document.getElementById('btn-login');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Logging in...';
     try {
         const pass = document.getElementById('login-pass').value;
         const phoneInput = document.querySelector("#login-phone");
@@ -104,7 +108,7 @@ async function handleLogin() {
         } else {
             console.warn("ITI Login fallback used");
             const val = phoneInput.value.replace(/[^0-9]/g, '');
-            if (val.length < 8) return showToast("Please enter a valid phone number", "error");
+            if (val.length < 8) { btn.disabled = false; btn.innerHTML = originalText; return showToast("Please enter a valid phone number", "error"); }
             phoneNumber = val;
         }
 
@@ -112,16 +116,23 @@ async function handleLogin() {
     } catch (e) {
         console.error("Login Error:", e);
         showToast("Login Failed: " + (e.message || "Unknown error"), "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
 async function handleSignup() {
+    const btn = document.getElementById('btn-create-account');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating account...';
     try {
         const name = document.getElementById('reg-name').value;
         const pass = document.getElementById('reg-pass').value;
         const courseIds = Array.from(document.querySelectorAll('input[name="reg-courses"]:checked')).map(cb => cb.value);
 
-        if (!name || !pass || courseIds.length === 0) return showToast("All fields required", "error");
+        if (!name || !pass || courseIds.length === 0) { btn.disabled = false; btn.innerHTML = originalText; return showToast("All fields required", "error"); }
 
         const phoneInput = document.querySelector("#reg-phone");
         let phoneNumber;
@@ -131,7 +142,7 @@ async function handleSignup() {
         } else {
             console.warn("ITI Signup fallback used");
             const val = phoneInput.value.trim();
-            if (val.length < 8) return showToast("Please enter a valid phone number", "error");
+            if (val.length < 8) { btn.disabled = false; btn.innerHTML = originalText; return showToast("Please enter a valid phone number", "error"); }
             phoneNumber = val.startsWith('+') ? val : '+20' + val.replace(/^0/, '');
         }
 
@@ -146,7 +157,7 @@ async function handleSignup() {
                 if (c.subcourses && c.subcourses.includes(code)) isValidCode = true;
             });
 
-            if (!isValidCode) return showToast("Invalid Group Code for selected courses", "error");
+            if (!isValidCode) { btn.disabled = false; btn.innerHTML = originalText; return showToast("Invalid Group Code for selected courses", "error"); }
             subcourseCode = code;
         }
 
@@ -175,6 +186,9 @@ async function handleSignup() {
     } catch (e) {
         console.error("Signup Error:", e);
         showToast("Signup Failed: " + (e.message || "Error"), "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 

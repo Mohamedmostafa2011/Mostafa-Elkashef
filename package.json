@@ -1,0 +1,12 @@
+{
+  "name": "kashef-platform",
+  "version": "1.0.0",
+  "description": "Learning platform for students and instructors",
+  "scripts": {
+    "start": "npx -y serve .",
+    "dev": "npx -y serve . -p 3000"
+  },
+  "dependencies": {
+    "firebase": "^10.8.0"
+  }
+}

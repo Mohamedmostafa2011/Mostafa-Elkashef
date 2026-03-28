@@ -1,7 +1,7 @@
 import { db } from "./config.js";
 import { doc, getDocs, getDoc, query, collection, where, deleteDoc, updateDoc, addDoc, writeBatch, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
-import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml } from "./utils_v7.js?v=7";
+import { showToast, generateVideoCardHtml, setupSubcourseInputs, getSkeletonHtml, withViewTransition, generateAttachmentsHtml, escapeHTML } from "./utils_v7.js?v=7";
 import { renderAdminHome } from "./admin.js";
 import { uploadToHuggingFace } from "./hf_storage_v4.js";
 
@@ -79,8 +79,14 @@ export async function renderCourseSelection(courseIds) {
 
     let courses = [];
     for (const id of courseIds) {
-        const snap = await getDoc(doc(db, "courses", id));
-        if (snap.exists()) courses.push({ id, ...snap.data() });
+        // Try cached data first to avoid N individual getDoc calls
+        let cached = state.availableCourses.find(c => c.id === id);
+        if (cached) {
+            courses.push(cached);
+        } else {
+            const snap = await getDoc(doc(db, "courses", id));
+            if (snap.exists()) courses.push({ id, ...snap.data() });
+        }
     }
 
     const cards = courses.map(c => `
@@ -279,17 +285,21 @@ async function _renderTabInternal(tabName) {
 
         // --- STUDENTS TAB ---
         if (tabName === 'students' && isAdmin) {
-            const qUsers = query(collection(db, "users"), where("status", "==", "approved"));
-            const snap = await getDocs(qUsers);
+            if (!state.cachedApprovedUsers) {
+                const qUsers = query(collection(db, "users"), where("status", "==", "approved"));
+                const snap = await getDocs(qUsers);
+                state.cachedApprovedUsers = [];
+                snap.forEach(d => state.cachedApprovedUsers.push({ id: d.id, ...d.data() }));
+            }
+
             let students = [];
-            snap.forEach(d => {
-                const u = d.data();
+            state.cachedApprovedUsers.forEach(u => {
                 if (u.role === 'admin') return;
 
                 const userCourseIds = u.courseIds || (u.courseId ? [u.courseId] : []);
                 if (userCourseIds.includes(state.activeCourseContext.id)) {
                     if (state.activeCourseContext.subcode && u.subcourseCode !== state.activeCourseContext.subcode) return;
-                    students.push({ id: d.id, ...u });
+                    students.push(u); // u already has the id property from the snap.forEach
                 }
             });
 
@@ -298,8 +308,8 @@ async function _renderTabInternal(tabName) {
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-lg"><i class="fas fa-user"></i></div>
                         <div>
-                            <h4 class="font-bold text-slate-900">${s.name}</h4>
-                            <p class="text-xs text-slate-500 font-mono">${s.phone}</p>
+                            <h4 class="font-bold text-slate-900">${escapeHTML(s.name)}</h4>
+                            <p class="text-xs text-slate-500 font-mono">${escapeHTML(s.phone)}</p>
                         </div>
                     </div>
                     <button onclick="window.deleteStudentAccount('${s.id}', '${s.name}')" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash"></i></button>
@@ -370,12 +380,16 @@ async function _renderTabInternal(tabName) {
             // Let's assume we will add 'section' field to all new items.
             // For legacy items (videos/files tabs), we might need migration or fallback.
 
-            const q = query(collection(db, "course_content"), where("courseId", "==", state.activeCourseContext.id));
-            const snap = await getDocs(q);
-            let items = [];
+            const cId = state.activeCourseContext.id;
+            if (!state.cachedCourseContent[cId]) {
+                const q = query(collection(db, "course_content"), where("courseId", "==", cId));
+                const snap = await getDocs(q);
+                state.cachedCourseContent[cId] = [];
+                snap.forEach(d => state.cachedCourseContent[cId].push({ id: d.id, ...d.data() }));
+            }
 
-            snap.forEach(d => {
-                const data = d.data();
+            let items = [];
+            state.cachedCourseContent[cId].forEach(data => {
                 if (data.subcourseCode && data.subcourseCode !== state.activeCourseContext.subcode) return;
 
                 // --- FILTERING LOGIC ---
@@ -411,7 +425,7 @@ async function _renderTabInternal(tabName) {
                     return;
                 }
                 
-                items.push({ id: d.id, ...data });
+                items.push(data);
             });
 
             // Sort
@@ -463,6 +477,9 @@ async function _renderTabInternal(tabName) {
                     <button onclick="window.handleBulkAction('copy')" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-full font-bold transition" title="Copy"><i class="fas fa-copy"></i></button>
                     <button onclick="window.handleBulkAction('move')" class="w-10 h-10 flex items-center justify-center bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-full font-bold transition" title="Move"><i class="fas fa-arrow-right"></i></button>
                     <button onclick="window.handleBulkAction('delete')" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded-full font-bold transition" title="Delete"><i class="fas fa-trash"></i></button>
+                    
+                    <div class="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                    <button onclick="window.toggleSelectionMode()" class="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full font-bold transition" title="Cancel Selection"><i class="fas fa-times"></i></button>
                 </div>`;
             }
 
@@ -617,6 +634,7 @@ export async function toggleItemState(id, field, currentValue) {
         const ref = doc(db, "course_content", id);
         await updateDoc(ref, { [field]: newValue });
         showToast(`Item ${field === 'isLocked' ? (newValue ? 'Locked' : 'Unlocked') : (newValue ? 'Hidden' : 'Visible')}`, "success");
+        state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
         _renderTabInternal(state.activeTab || 'content');
     } catch (e) {
         console.error("Error toggling state:", e);
@@ -739,7 +757,7 @@ export function openFileViewer(url, type = 'file') {
         content.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Preview">`;
     }
     else if (fileType === 'video') {
-        content.innerHTML = `<video controls controlsList="nodownload" autoplay class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
+        content.innerHTML = `<video controls controlsList="nodownload" autoplay oncontextmenu="return false;" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl outline-none">
                     <source src="${url}">
                     Your browser does not support the video tag.
                 </video>`;
@@ -1011,6 +1029,7 @@ export async function handleSaveContent() {
         }
 
         toggleContentModal();
+        state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
         if (state.activeTab) _renderTabInternal(state.activeTab); // Refresh
 
     } catch (e) {
@@ -1027,6 +1046,7 @@ export async function deleteContent(id, section) {
     try {
         await deleteDoc(doc(db, "course_content", id));
         showToast("Item deleted");
+        state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
         _renderTabInternal(state.activeTab || 'content');
     } catch (e) {
         console.error(e);
@@ -1067,6 +1087,7 @@ export async function handleBulkAction(action) {
             });
             await batch.commit();
             showToast("Selected items deleted.", "success");
+            state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
             toggleSelectionMode();
         } catch (e) {
             console.error(e);
@@ -1085,6 +1106,7 @@ export async function handleBulkAction(action) {
             });
             await batch.commit();
             showToast(`Items ${newValue ? (action === 'hide' ? 'Hidden' : 'Locked') : (action === 'hide' ? 'Visible' : 'Unlocked')}`, "success");
+            state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
             toggleSelectionMode();
         } catch(e) {
             console.error(e);
@@ -1188,13 +1210,21 @@ async function loadDestinationFolders() {
     if (!courseId) return;
 
     try {
-        const q = query(collection(db, "course_content"), 
-            where("courseId", "==", courseId), 
-            where("type", "in", ["folder", "file_folder"]),
-            where("section", "==", section)
-        );
-        const sn = await getDocs(q);
-        const folders = sn.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=> (a.order||0) - (b.order||0));
+        let allItems;
+        // Use cache if available for this course
+        if (state.cachedCourseContent[courseId]) {
+            allItems = state.cachedCourseContent[courseId];
+        } else {
+            const q = query(collection(db, "course_content"), 
+                where("courseId", "==", courseId)
+            );
+            const sn = await getDocs(q);
+            allItems = sn.docs.map(d => ({id: d.id, ...d.data()}));
+            state.cachedCourseContent[courseId] = allItems; // Cache it
+        }
+        const folders = allItems
+            .filter(d => (d.type === 'folder' || d.type === 'file_folder') && d.section === section)
+            .sort((a,b) => (a.order||0) - (b.order||0));
         folders.forEach(f => {
             folderSelect.innerHTML += `<option value="${f.id}">${f.title}</option>`;
         });
@@ -1232,6 +1262,7 @@ export async function confirmDestinationAction() {
                 });
             });
             await batch.commit();
+            state.cachedCourseContent = {}; // Invalidate all course content caches (cross-course move)
             showToast("Items moved successfully.", "success");
         } else if (action === 'copy') {
             toUpdate.forEach(item => {
@@ -1245,6 +1276,7 @@ export async function confirmDestinationAction() {
                 batch.set(newRef, newData);
             });
             await batch.commit();
+            state.cachedCourseContent = {}; // Invalidate all course content caches (cross-course copy)
             showToast("Items copied successfully.", "success");
         }
 

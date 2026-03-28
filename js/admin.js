@@ -19,9 +19,12 @@ async function _renderAdminInternal() {
     const container = document.getElementById('main-view');
     container.innerHTML = getSkeletonHtml(3);
 
-    const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt", "asc")));
-    state.availableCourses = [];
-    snap.forEach(d => state.availableCourses.push({ id: d.id, ...d.data() }));
+    if (state.availableCourses.length === 0) {
+        const snap = await getDocs(query(collection(db, "courses"), orderBy("createdAt", "asc")));
+        state.availableCourses = [];
+        snap.forEach(d => state.availableCourses.push({ id: d.id, ...d.data() }));
+    }
+    const snap = state.availableCourses;
 
     let html = `
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
@@ -33,9 +36,8 @@ async function _renderAdminInternal() {
 
     const icons = ['fa-square-root-variable', 'fa-chart-pie', 'fa-calculator', 'fa-superscript', 'fa-infinity'];
 
-    snap.forEach((doc, i) => {
-        const c = doc.data();
-        const safeCourse = encodeURIComponent(JSON.stringify({ id: doc.id, ...c }));
+    snap.forEach((c, i) => {
+        const safeCourse = encodeURIComponent(JSON.stringify({ id: c.id, ...c }));
         const icon = icons[i % icons.length];
 
         html += `
@@ -45,7 +47,7 @@ async function _renderAdminInternal() {
                 
                 <button onclick="window.openModalForEdit('${safeCourse}', event)" class="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white text-white hover:text-brand-dark rounded-full flex items-center justify-center backdrop-blur transition z-20"><i class="fas fa-cog"></i></button>
 
-                <div class="absolute inset-0 z-10 cursor-pointer" onclick="window.enterCourseLogic('${doc.id}', ${c.subcourses ? c.subcourses.length : 0})"></div>
+                <div class="absolute inset-0 z-10 cursor-pointer" onclick="window.enterCourseLogic('${c.id}', ${c.subcourses ? c.subcourses.length : 0})"></div>
 
                 <div class="relative z-0 mt-4">
                     ${c.subcourses && c.subcourses.length > 0 ? `<span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/30">${c.subcourses.length} Groups</span>` : ''}
@@ -63,9 +65,14 @@ async function _renderAdminInternal() {
 }
 
 export async function enterCourseLogic(courseId, subCount) {
-    if (subCount > 0) {
+    // Use cached course data instead of fetching from Firestore again
+    let course = state.availableCourses.find(c => c.id === courseId);
+    if (!course) {
         const snap = await getDoc(doc(db, "courses", courseId));
-        const course = snap.data();
+        course = { id: courseId, ...snap.data() };
+    }
+
+    if (subCount > 0) {
         const container = document.getElementById('main-view');
 
         let html = `
@@ -84,8 +91,7 @@ export async function enterCourseLogic(courseId, subCount) {
         html += `</div>`;
         container.innerHTML = html;
     } else {
-        const snap = await getDoc(doc(db, "courses", courseId));
-        openCourseDashboard(courseId, snap.data().title, null);
+        openCourseDashboard(courseId, course.title, null);
     }
 }
 
@@ -95,8 +101,11 @@ export async function renderApprovals() {
         <button onclick="window.renderApprovals()" class="nav-item w-full flex items-center gap-3 px-4 py-3 bg-brand-light text-brand-primary rounded-xl font-bold text-sm"><i class="fas fa-user-check"></i> Approvals</button>
     `;
     if (state.availableCourses.length === 0) { const cSnap = await getDocs(query(collection(db, "courses"))); cSnap.forEach(d => state.availableCourses.push({ id: d.id, ...d.data() })); }
-    const snap = await getDocs(query(collection(db, "users"), where("status", "==", "pending")));
-    let html = `<div class="max-w-4xl mx-auto"><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests</h2><div class="space-y-4">`;
+    
+    // We add limit(50) to prevent unbound queries of pending users
+    const { limit } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+    const snap = await getDocs(query(collection(db, "users"), where("status", "==", "pending"), limit(50)));
+    let html = `<div class="max-w-4xl mx-auto"><h2 class="text-2xl font-bold mb-6 text-slate-800">Requests (Top 50)</h2><div class="space-y-4">`;
     if (snap.empty) html += `<p class="text-slate-400">No pending requests.</p>`;
     snap.forEach(d => {
         const u = d.data();
@@ -128,6 +137,7 @@ export async function renderApprovals() {
 export async function approveUser(uid) {
     await updateDoc(doc(db, "users", uid), { status: 'approved' });
     showToast("Approved");
+    state.cachedApprovedUsers = null; // Invalidate cache
     renderApprovals();
 }
 
@@ -136,6 +146,7 @@ export async function rejectUser(uid) {
     try {
         await deleteDoc(doc(db, "users", uid));
         showToast("User rejected");
+        state.cachedApprovedUsers = null; // Invalidate cache
         renderApprovals();
     } catch (e) {
         showToast("Error rejecting user", "error");
@@ -147,6 +158,7 @@ export async function deleteStudentAccount(uid, name) {
     try {
         await deleteDoc(doc(db, "users", uid));
         showToast("Student deleted");
+        state.cachedApprovedUsers = null; // Invalidate cache
         renderTab('students');
     } catch (e) { showToast("Error deleting student", "error"); }
 }
@@ -196,6 +208,7 @@ export async function handleSaveCourse() {
             await addDoc(collection(db, "courses"), { title, subcourses: subs, theme, createdAt: new Date().toISOString() });
             showToast("Created");
         }
+        state.availableCourses = []; // Invalidate cache
         toggleCourseModal();
         renderAdminHome();
     } catch (e) { showToast("Error", "error"); }
@@ -204,6 +217,7 @@ export async function handleSaveCourse() {
 export async function handleDeleteCourse() {
     if (!confirm("Delete?")) return;
     await deleteDoc(doc(db, "courses", document.getElementById('edit-course-id').value));
+    state.availableCourses = []; // Invalidate cache
     toggleCourseModal();
     renderAdminHome();
     showToast("Deleted");

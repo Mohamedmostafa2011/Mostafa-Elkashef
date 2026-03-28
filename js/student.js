@@ -15,8 +15,15 @@ export async function renderStudentDashboard() {
     } else {
         // A course is already active (e.g. state preserved or navigating back)
         const activeId = state.activeCourseContext.id;
-        const cSnap = await getDoc(doc(db, "courses", activeId));
-        const title = cSnap.exists() ? cSnap.data().title : "Unknown Course";
+        // Try cached data first
+        let cached = state.availableCourses.find(c => c.id === activeId);
+        let title;
+        if (cached) {
+            title = cached.title;
+        } else {
+            const cSnap = await getDoc(doc(db, "courses", activeId));
+            title = cSnap.exists() ? cSnap.data().title : "Unknown Course";
+        }
         state.activeCourseContext = { id: activeId, title, subcode: u.subcourseCode };
         openCourseDashboard(activeId, title, u.subcourseCode);
     }
