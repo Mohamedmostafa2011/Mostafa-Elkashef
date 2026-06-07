@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
-import { renderAdminHome, renderApprovals, approveUser, rejectUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal } from "./admin.js?v=8";
+import { renderAdminHome, renderApprovals, approveUser, rejectUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal, renderQrCodes, toggleQrTab, deleteQrCode, closeQrModal, showQrModal, handleCreateQr } from "./admin.js?v=8";
 import { renderStudentDashboard } from "./student.js?v=2";
 import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal, toggleItemState, toggleSelectionMode, toggleCardSelection, handleBulkAction, openDestinationModal, closeDestinationModal, confirmDestinationAction } from "./dashboard_v9.js?v=FIX_FINAL_V2";
 import { showToast } from "./utils_v7.js";
@@ -36,6 +36,14 @@ window.openFileViewer = openFileViewer;
 window.closeFileViewer = closeFileViewer;
 window._closeViewerInternal = _closeViewerInternal;
 window.deleteStudentAccount = deleteStudentAccount;
+
+// QR Codes global exposure
+window.renderQrCodes = renderQrCodes;
+window.toggleQrTab = toggleQrTab;
+window.deleteQrCode = deleteQrCode;
+window.closeQrModal = closeQrModal;
+window.showQrModal = showQrModal;
+window.handleCreateQr = handleCreateQr;
 
 // Bulk Action Modals and Selection Mode
 window.toggleSelectionMode = toggleSelectionMode;
@@ -119,8 +127,14 @@ onAuthStateChanged(auth, async (user) => {
                     document.body.classList.remove('is-instructor');
                 }
 
-                if (state.currentUserData.role === 'admin') renderAdminHome();
-                else renderStudentDashboard();
+                const urlParams = new URLSearchParams(window.location.search);
+                const qrId = urlParams.get('qrId');
+                if (qrId) {
+                    handleQrRedirect(qrId);
+                } else {
+                    if (state.currentUserData.role === 'admin') renderAdminHome();
+                    else renderStudentDashboard();
+                }
             }
         } else {
             await signOut(auth);
@@ -153,3 +167,38 @@ window.addEventListener('popstate', (event) => {
         renderTab('home', true);
     }
 });
+
+async function handleQrRedirect(qrId) {
+    try {
+        const qrDoc = await getDoc(doc(db, "qr_codes", qrId));
+        if (qrDoc.exists()) {
+            const qrData = qrDoc.data();
+            
+            // Render the dashboard in background
+            if (state.currentUserData.role === 'admin') {
+                renderAdminHome();
+            } else {
+                renderStudentDashboard();
+            }
+            
+            // Open viewer modal
+            setTimeout(() => {
+                openFileViewer(qrData.url, qrData.fileType || 'file');
+            }, 300);
+
+            // Clear qrId from query string
+            const url = new URL(window.location.href);
+            url.searchParams.delete('qrId');
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+        } else {
+            showToast("QR Code content not found or expired.", "error");
+            if (state.currentUserData.role === 'admin') renderAdminHome();
+            else renderStudentDashboard();
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Error loading QR content.", "error");
+        if (state.currentUserData.role === 'admin') renderAdminHome();
+        else renderStudentDashboard();
+    }
+}

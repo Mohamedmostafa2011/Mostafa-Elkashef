@@ -33,6 +33,9 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 
+    <!-- QRCode Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -416,6 +419,30 @@
     </div>
 
 
+
+    <!-- ================= QR DISPLAY MODAL ================= -->
+    <div id="qr-display-modal"
+        class="fixed inset-0 z-[1010] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden fade-in p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl p-6 relative">
+            <button onclick="window.closeQrModal()"
+                class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><i
+                    class="fas fa-times"></i></button>
+            <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white mb-4 text-center" id="qr-modal-title">QR Code</h3>
+            <div class="flex flex-col items-center justify-center">
+                <div id="qr-modal-canvas-container" class="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-6 flex justify-center items-center">
+                    <!-- Canvas/Img will be appended here -->
+                </div>
+                <div class="w-full space-y-3">
+                    <button id="qr-modal-download-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition flex justify-center items-center gap-2">
+                        <i class="fas fa-download"></i> Download Image
+                    </button>
+                    <button id="qr-modal-copy-btn" class="w-full bg-brand-primary hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition flex justify-center items-center gap-2">
+                        <i class="fas fa-copy"></i> Copy Scan Link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- SCRIPTS -->
     <!-- Removed old ITI script from here -->

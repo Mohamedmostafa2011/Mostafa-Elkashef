@@ -381,6 +381,24 @@ async function _renderTabInternal(tabName) {
             // For legacy items (videos/files tabs), we might need migration or fallback.
 
             const cId = state.activeCourseContext.id;
+            let qrCodeMap = {};
+            if (isAdmin) {
+                if (!state.cachedQrCodesByCourse) state.cachedQrCodesByCourse = {};
+                if (!state.cachedQrCodesByCourse[cId]) {
+                    const qrSnap = await getDocs(query(collection(db, "qr_codes"), where("courseId", "==", cId)));
+                    const map = {};
+                    qrSnap.forEach(d => {
+                        const qr = { id: d.id, ...d.data() };
+                        if (qr.attachedItemId) {
+                            map[qr.attachedItemId] = map[qr.attachedItemId] || [];
+                            map[qr.attachedItemId].push(qr);
+                        }
+                    });
+                    state.cachedQrCodesByCourse[cId] = map;
+                }
+                qrCodeMap = state.cachedQrCodesByCourse[cId] || {};
+            }
+
             if (!state.cachedCourseContent[cId]) {
                 const q = query(collection(db, "course_content"), where("courseId", "==", cId));
                 const snap = await getDocs(q);
@@ -424,6 +442,8 @@ async function _renderTabInternal(tabName) {
                 if (state.currentUserData.role !== 'admin' && data.isHidden) {
                     return;
                 }
+                data.qrCodes = qrCodeMap[data.id] || [];
+                data.qrCount = data.qrCodes.length;
                 
                 items.push(data);
             });

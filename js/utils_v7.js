@@ -237,6 +237,9 @@ export function generateVideoCardHtml(item, isAdmin) {
         const isDrive = videoUrl.includes('drive.google.com');
         const topicNo = item.topicNo;
         const topicTitle = item.topicTitle;
+        const qrCount = item.qrCount || (item.qrCodes ? item.qrCodes.length : 0);
+        const safeTitle = item.title.replace(/'/g, "\\'");
+        const itemType = item.type || (isFile ? 'file' : 'video');
 
         // Extract YouTube/Video Thumbnail
         let thumbnailHtml = `<div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand-dark opacity-40"></div>`;
@@ -362,6 +365,8 @@ export function generateVideoCardHtml(item, isAdmin) {
             fileStatusBadges += `</div></div>`;
         }
 
+        const qrBadgeHtml = qrCount > 0 ? `<div class="absolute top-3 left-3 z-30 bg-white/90 text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm"><i class="fas fa-qrcode"></i> ${qrCount}</div>` : '';
+
         let studentFileLockOverlay = (!isAdmin && item.isLocked) ? `
             <div class="absolute inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
                 <div class="bg-white/10 p-3 rounded-full border border-white/20 shadow-2xl backdrop-blur-md">
@@ -385,6 +390,7 @@ export function generateVideoCardHtml(item, isAdmin) {
             ${thumbnailHtml}
             ${dragHandle}
             ${fileStatusBadges}
+            ${qrBadgeHtml}
             ${studentFileLockOverlay}
 
             <!-- Play/View Button Overlay -->
@@ -425,11 +431,13 @@ export function generateVideoCardHtml(item, isAdmin) {
                     </h4>
                     ${isAdmin ? `
                     <div class="flex gap-2 shrink-0">
-                        <button onclick="window.toggleItemState('${item.id}', 'isLocked', ${item.isLocked || false}); event.stopPropagation();" class="text-slate-300 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="${item.isLocked ? 'Unlock' : 'Lock'}"><i class="fas ${item.isLocked ? 'fa-lock text-amber-500' : 'fa-unlock'} text-xs"></i></button>
-                        <button onclick="window.toggleItemState('${item.id}', 'isHidden', ${item.isHidden || false}); event.stopPropagation();" class="text-slate-300 hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="${item.isHidden ? 'Unhide' : 'Hide'}"><i class="fas ${item.isHidden ? 'fa-eye-slash text-purple-400' : 'fa-eye'} text-xs"></i></button>
+                        ${qrCount > 0 ? `<button onclick="event.stopPropagation(); window.viewItemQr('${item.id}', '${safeTitle}')" class="text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="View QR"><i class="fas fa-qrcode text-xs"></i></button>` : ''}
+                        <button onclick="event.stopPropagation(); window.createQrForExistingItem('${item.id}', '${safeTitle}', '${safeUrl}', '${itemType}', '${state.activeCourseContext.id}')" class="text-slate-300 hover:text-brand-primary hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="Create QR"><i class="fas fa-plus text-xs"></i></button>
+                        <button onclick="event.stopPropagation(); window.toggleItemState('${item.id}', 'isLocked', ${item.isLocked || false});" class="text-slate-300 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="${item.isLocked ? 'Unlock' : 'Lock'}"><i class="fas ${item.isLocked ? 'fa-lock text-amber-500' : 'fa-unlock'} text-xs"></i></button>
+                        <button onclick="event.stopPropagation(); window.toggleItemState('${item.id}', 'isHidden', ${item.isHidden || false});" class="text-slate-300 hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors" title="${item.isHidden ? 'Unhide' : 'Hide'}"><i class="fas ${item.isHidden ? 'fa-eye-slash text-purple-400' : 'fa-eye'} text-xs"></i></button>
 
-                        <button onclick="window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                        <button onclick="window.deleteContent('${item.id}', '${item.section || 'content'}')" class="text-slate-300 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                        <button onclick="event.stopPropagation(); window.openEditContentModal('${encodeURIComponent(JSON.stringify(item))}')" class="text-slate-300 hover:text-brand-primary hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                        <button onclick="event.stopPropagation(); window.deleteContent('${item.id}', '${item.section || 'content'}')" class="text-slate-300 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700 w-8 h-8 rounded flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
                     </div>` : ''}
                 </div>
                 

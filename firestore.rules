@@ -39,5 +39,11 @@ service cloud.firestore {
       allow read: if isApproved() && 
         resource.data.isHidden == false;
     }
+
+    // --- COLLECTION: QR_CODES ---
+    match /qr_codes/{qrId} {
+      allow write: if isAdmin();
+      allow read: if request.auth != null;
+    }
   }
 }
