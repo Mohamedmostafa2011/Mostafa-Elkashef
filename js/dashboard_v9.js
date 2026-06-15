@@ -698,34 +698,235 @@ async function renderPdfInViewer(url, container) {
         const loadingTask = pdfjsLib.getDocument(url);
         const pdf = await loadingTask.promise;
 
-        container.innerHTML = ''; // Clear loading
+        // Reset and apply flexbox styles to container
+        container.innerHTML = '';
+        container.className = "w-full h-full flex flex-col bg-slate-950 text-white relative";
 
-        const wrapper = document.createElement('div');
-        wrapper.className = "w-full h-full overflow-y-auto flex flex-col items-center gap-4 p-4";
-        container.appendChild(wrapper);
+        // Navigation Control Bar
+        const controls = document.createElement('div');
+        controls.className = "flex items-center justify-between w-full h-14 bg-slate-900 border-b border-slate-800 px-4 shrink-0 select-none z-10";
 
+        const leftGroup = document.createElement('div');
+        leftGroup.className = "flex items-center gap-3";
+
+        // Grid toggle button
+        const gridBtn = document.createElement('button');
+        gridBtn.className = "w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95";
+        gridBtn.innerHTML = '<i class="fas fa-th text-lg"></i>';
+        gridBtn.title = "Toggle Page Grid";
+        leftGroup.appendChild(gridBtn);
+
+        // Page navigation indicator
+        const pageIndicator = document.createElement('div');
+        pageIndicator.className = "flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700";
+
+        const pageInput = document.createElement('input');
+        pageInput.type = "number";
+        pageInput.min = "1";
+        pageInput.max = pdf.numPages;
+        pageInput.value = "1";
+        pageInput.className = "w-12 bg-slate-900 border border-slate-700 rounded-lg text-center font-bold text-white px-1 py-0.5 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none text-sm";
+
+        const pageTotal = document.createElement('span');
+        pageTotal.className = "text-slate-400 font-bold text-sm select-none";
+        pageTotal.textContent = `/ ${pdf.numPages}`;
+
+        pageIndicator.appendChild(pageInput);
+        pageIndicator.appendChild(pageTotal);
+        leftGroup.appendChild(pageIndicator);
+        controls.appendChild(leftGroup);
+
+        // Spacer for Close button on mobile
+        const rightSpacer = document.createElement('div');
+        rightSpacer.className = "w-28 shrink-0 md:w-auto";
+        controls.appendChild(rightSpacer);
+
+        container.appendChild(controls);
+
+        // Views Container
+        const viewsContainer = document.createElement('div');
+        viewsContainer.className = "flex-1 w-full overflow-hidden relative";
+
+        const normalView = document.createElement('div');
+        normalView.className = "w-full h-full overflow-y-auto flex flex-col items-center gap-6 p-6 scroll-smooth bg-slate-950";
+
+        const gridView = document.createElement('div');
+        gridView.className = "w-full h-full overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 p-6 hidden bg-slate-900";
+
+        viewsContainer.appendChild(normalView);
+        viewsContainer.appendChild(gridView);
+        container.appendChild(viewsContainer);
+
+        let isProgrammaticScroll = false;
+        let scrollTimeout = null;
+
+        // Scroll helper
+        const scrollToPage = (pageNum) => {
+            const targetCanvas = normalView.querySelector(`[data-page="${pageNum}"]`);
+            if (targetCanvas) {
+                isProgrammaticScroll = true;
+                targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                if (scrollTimeout) clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    isProgrammaticScroll = false;
+                }, 800);
+            }
+        };
+
+        // Page input event handler
+        const handlePageInputChange = () => {
+            let val = parseInt(pageInput.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > pdf.numPages) val = pdf.numPages;
+            pageInput.value = val;
+
+            if (!gridView.classList.contains('hidden')) {
+                gridView.classList.add('hidden');
+                normalView.classList.remove('hidden');
+                gridBtn.innerHTML = '<i class="fas fa-th text-lg"></i>';
+            }
+            scrollToPage(val);
+        };
+
+        pageInput.addEventListener('change', handlePageInputChange);
+        pageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                pageInput.blur();
+            }
+        });
+
+        // Grid Button toggle handler
+        gridBtn.addEventListener('click', () => {
+            const isGridVisible = !gridView.classList.contains('hidden');
+            if (isGridVisible) {
+                gridView.classList.add('hidden');
+                normalView.classList.remove('hidden');
+                gridBtn.innerHTML = '<i class="fas fa-th text-lg"></i>';
+                
+                // Scroll normal view to active page
+                const val = parseInt(pageInput.value) || 1;
+                const targetCanvas = normalView.querySelector(`[data-page="${val}"]`);
+                if (targetCanvas) {
+                    targetCanvas.scrollIntoView({ block: 'start' });
+                }
+            } else {
+                gridView.classList.remove('hidden');
+                normalView.classList.add('hidden');
+                gridBtn.innerHTML = '<i class="fas fa-file-pdf text-lg text-brand-primary"></i>';
+                
+                // Scroll grid view to active page
+                const val = parseInt(pageInput.value) || 1;
+                const targetGridItem = gridView.querySelector(`[data-grid-page="${val}"]`);
+                if (targetGridItem) {
+                    targetGridItem.scrollIntoView({ block: 'center' });
+                }
+            }
+        });
+
+        // Track scrolling to update page input automatically
+        normalView.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) return;
+
+            const containerRect = normalView.getBoundingClientRect();
+            let currentVisiblePage = 1;
+            let maxVisibleHeight = 0;
+
+            const pageElements = normalView.querySelectorAll('[data-page]');
+            pageElements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const visibleTop = Math.max(rect.top, containerRect.top);
+                const visibleBottom = Math.min(rect.bottom, containerRect.bottom);
+                const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+                if (visibleHeight > maxVisibleHeight) {
+                    maxVisibleHeight = visibleHeight;
+                    currentVisiblePage = parseInt(el.dataset.page);
+                }
+            });
+
+            if (maxVisibleHeight > 0) {
+                pageInput.value = currentVisiblePage;
+            }
+        });
+
+        // Render each page
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
-            const scale = 2.0; // Optimized for mobile/web (approx 200 DPI)
+
+            // --- NORMAL VIEW CANVAS ---
+            const scale = 2.0; // Optimized for mobile/web
             const viewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
             canvas.className = "shadow-lg rounded-lg bg-white max-w-full";
+            canvas.dataset.page = pageNum;
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-
-            // Make it responsive via CSS
             canvas.style.maxWidth = '100%';
             canvas.style.height = 'auto';
 
-            wrapper.appendChild(canvas);
+            normalView.appendChild(canvas);
 
+            // --- GRID VIEW ITEM ---
+            const gridItem = document.createElement('div');
+            gridItem.className = "flex flex-col items-center bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-brand-primary rounded-2xl p-4 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 select-none group shadow-lg";
+            gridItem.dataset.gridPage = pageNum;
+
+            const canvasWrapper = document.createElement('div');
+            canvasWrapper.className = "w-full flex items-center justify-center bg-white rounded-xl overflow-hidden border border-slate-700/30 group-hover:border-slate-600 transition-colors shadow-md p-1";
+
+            const thumbCanvas = document.createElement('canvas');
+            thumbCanvas.className = "max-w-full max-h-full object-contain";
+            const thumbScale = 0.3; // Thumbnail scale
+            const thumbViewport = page.getViewport({ scale: thumbScale });
+            thumbCanvas.height = thumbViewport.height;
+            thumbCanvas.width = thumbViewport.width;
+
+            canvasWrapper.appendChild(thumbCanvas);
+            gridItem.appendChild(canvasWrapper);
+
+            const pageLabel = document.createElement('span');
+            pageLabel.className = "text-xs font-bold text-slate-400 group-hover:text-white mt-3 transition-colors";
+            pageLabel.textContent = `Page ${pageNum}`;
+            gridItem.appendChild(pageLabel);
+
+            gridView.appendChild(gridItem);
+
+            // Click handler for grid items
+            gridItem.addEventListener('click', () => {
+                pageInput.value = pageNum;
+                gridView.classList.add('hidden');
+                normalView.classList.remove('hidden');
+                gridBtn.innerHTML = '<i class="fas fa-th text-lg"></i>';
+
+                const targetCanvas = normalView.querySelector(`[data-page="${pageNum}"]`);
+                if (targetCanvas) {
+                    isProgrammaticScroll = true;
+                    targetCanvas.scrollIntoView({ block: 'start' });
+                    setTimeout(() => {
+                        isProgrammaticScroll = false;
+                    }, 100);
+                }
+            });
+
+            // Trigger Normal View Render (awaited)
             const renderContext = {
                 canvasContext: context,
                 viewport: viewport
             };
             await page.render(renderContext).promise;
+
+            // Trigger Grid Thumbnail Render (background, unawaited)
+            const thumbContext = thumbCanvas.getContext('2d');
+            const thumbRenderContext = {
+                canvasContext: thumbContext,
+                viewport: thumbViewport
+            };
+            page.render(thumbRenderContext).promise.catch(err => {
+                console.error(`Error rendering thumbnail for page ${pageNum}:`, err);
+            });
         }
     } catch (error) {
         console.error("PDF Render Error:", error);
