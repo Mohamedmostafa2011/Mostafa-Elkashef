@@ -960,21 +960,32 @@ export function openFileViewer(url, type = 'file') {
 
     // Determine content type based on URL extension if generic 'file' type is passed
     let fileType = type;
-    const lowerUrl = url.toLowerCase();
+    const lowerUrl = url ? url.toLowerCase() : '';
 
     // Enhanced detection (handles Hugging Face resolve URLs better)
-    if (lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/)) fileType = 'image';
-    else if (lowerUrl.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/)) fileType = 'video';
-    else if (lowerUrl.match(/\.(pdf)(\?.*)?$/)) fileType = 'pdf';
-    else if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$/)) fileType = 'office';
-    else if (lowerUrl.match(/\.(txt|md|js|css|html|json|csv)(\?.*)?$/)) fileType = 'text';
+    if (lowerUrl && lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/)) fileType = 'image';
+    else if (lowerUrl && lowerUrl.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/)) fileType = 'video';
+    else if (lowerUrl && lowerUrl.match(/\.(pdf)(\?.*)?$/)) fileType = 'pdf';
+    else if (lowerUrl && lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$/)) fileType = 'office';
+    else if (lowerUrl && lowerUrl.match(/\.(txt|md|js|css|html|json|csv)(\?.*)?$/)) fileType = 'text';
 
     // Handle YouTube/Video links if not direct file
-    if (url.includes('youtube.com') || url.includes('youtu.be')) fileType = 'youtube';
-    else if (url.includes('drive.google.com')) fileType = 'drive';
+    if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) fileType = 'youtube';
+    else if (url && url.includes('drive.google.com')) fileType = 'drive';
 
     // Render Content
-    if (fileType === 'image') {
+    if (fileType === 'coming_soon') {
+        content.innerHTML = `
+            <div class="text-center text-white max-w-md mx-auto p-8 rounded-3xl bg-slate-800/80 backdrop-blur-md border border-white/10 shadow-2xl animate-fade-in">
+                <div class="w-24 h-24 bg-gradient-to-br from-brand-primary to-purple-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 text-white shadow-lg shadow-brand-primary/30 animate-pulse">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3 class="text-3xl font-display font-black mb-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Coming Soon</h3>
+                <p class="text-slate-300 font-medium">This content is not yet available. Please check back later!</p>
+            </div>
+        `;
+    }
+    else if (fileType === 'image') {
         content.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" alt="Preview">`;
     }
     else if (fileType === 'video') {

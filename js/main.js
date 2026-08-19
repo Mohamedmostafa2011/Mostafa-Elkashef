@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
-import { renderAdminHome, renderApprovals, approveUser, rejectUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal, renderQrCodes, toggleQrTab, deleteQrCode, closeQrModal, showQrModal, handleCreateQr } from "./admin.js?v=8";
+import { renderAdminHome, renderApprovals, approveUser, rejectUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal, renderQrCodes, toggleQrTab, deleteQrCode, closeQrModal, showQrModal, handleCreateQr, openQrOptionsModal, closeQrOptionsModal, showLinkComingSoonOptions, handleConfirmLinkComingSoon, handleSelectCreateNewQr, unlinkComingSoonQr, handleCreateComingSoonQr } from "./admin.js?v=8";
 import { renderStudentDashboard } from "./student.js?v=2";
 import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal, toggleItemState, toggleSelectionMode, toggleCardSelection, handleBulkAction, openDestinationModal, closeDestinationModal, confirmDestinationAction } from "./dashboard_v9.js?v=FIX_FINAL_V2";
 import { showToast } from "./utils_v7.js";
@@ -44,6 +44,13 @@ window.deleteQrCode = deleteQrCode;
 window.closeQrModal = closeQrModal;
 window.showQrModal = showQrModal;
 window.handleCreateQr = handleCreateQr;
+window.openQrOptionsModal = openQrOptionsModal;
+window.closeQrOptionsModal = closeQrOptionsModal;
+window.showLinkComingSoonOptions = showLinkComingSoonOptions;
+window.handleConfirmLinkComingSoon = handleConfirmLinkComingSoon;
+window.handleSelectCreateNewQr = handleSelectCreateNewQr;
+window.unlinkComingSoonQr = unlinkComingSoonQr;
+window.handleCreateComingSoonQr = handleCreateComingSoonQr;
 
 // Bulk Action Modals and Selection Mode
 window.toggleSelectionMode = toggleSelectionMode;
@@ -174,6 +181,34 @@ async function handleQrRedirect(qrId) {
         if (qrDoc.exists()) {
             const qrData = qrDoc.data();
             
+            // --- ACCESS CONTROL CHECK ---
+            if (state.currentUserData.role !== 'admin') {
+                const userCourses = state.currentUserData.courseIds || (state.currentUserData.courseId ? [state.currentUserData.courseId] : []);
+                let hasAccess = false;
+
+                if (qrData.courseId) {
+                    if (userCourses.includes(qrData.courseId)) hasAccess = true;
+                } else if (qrData.allowedCourseIds && Array.isArray(qrData.allowedCourseIds) && qrData.allowedCourseIds.length > 0) {
+                    if (qrData.allowedCourseIds.some(cId => userCourses.includes(cId))) {
+                        hasAccess = true;
+                    }
+                } else {
+                    // Backwards compatibility for old unlinked standalone QRs that don't have allowedCourseIds
+                    hasAccess = true;
+                }
+
+                if (!hasAccess) {
+                    showToast("sorry this video is not for your course", "error");
+                    renderStudentDashboard();
+                    
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('qrId');
+                    window.history.replaceState({}, document.title, url.pathname + url.search);
+                    return;
+                }
+            }
+            // --- END ACCESS CONTROL ---
+
             // Render the dashboard in background
             if (state.currentUserData.role === 'admin') {
                 renderAdminHome();
@@ -183,7 +218,11 @@ async function handleQrRedirect(qrId) {
             
             // Open viewer modal
             setTimeout(() => {
-                openFileViewer(qrData.url, qrData.fileType || 'file');
+                if (qrData.isComingSoon && !qrData.attachedItemId) {
+                    openFileViewer('', 'coming_soon');
+                } else {
+                    openFileViewer(qrData.url, qrData.fileType || 'file');
+                }
             }, 300);
 
             // Clear qrId from query string

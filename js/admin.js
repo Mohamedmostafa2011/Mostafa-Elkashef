@@ -1,5 +1,5 @@
 import { db, auth } from "./config.js";
-import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, deleteDoc, where, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, deleteDoc, where, addDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { state } from "./state.js";
 import { showToast, setupSubcourseInputs, getSkeletonHtml, withViewTransition } from "./utils_v7.js";
 import { openCourseDashboard, renderTab } from "./dashboard_v9.js";
@@ -240,7 +240,7 @@ export function updateAdminNavigation(activeTab) {
 
 // --- QR CODES DASHBOARD ---
 let selectedQrFile = null;
-let currentQrTab = 'create'; // 'create' or 'history'
+let currentQrTab = 'create'; // 'create', 'history', or 'coming_soon'
 
 export async function renderQrCodes() {
     withViewTransition(async () => {
@@ -258,11 +258,13 @@ function _renderQrCodesInternal() {
             <h2 class="text-3xl font-display font-bold text-slate-900 dark:text-white mb-2">QR Codes Manager</h2>
             <p class="text-slate-500 dark:text-slate-400 mb-8">Generate watermarked QR codes for files or URLs. Access is restricted to authenticated users only.</p>
 
-            <div class="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-8 w-fit">
+            <div class="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-8 w-fit gap-1 flex-wrap">
                 <button onclick="window.toggleQrTab('create')" id="qr-tab-create"
                     class="px-6 py-2.5 text-sm font-bold rounded-lg transition-all ${currentQrTab === 'create' ? 'bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}">Generate New</button>
                 <button onclick="window.toggleQrTab('history')" id="qr-tab-history"
                     class="px-6 py-2.5 text-sm font-bold rounded-lg transition-all ${currentQrTab === 'history' ? 'bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}">Saved QR Codes</button>
+                <button onclick="window.toggleQrTab('coming_soon')" id="qr-tab-coming-soon"
+                    class="px-6 py-2.5 text-sm font-bold rounded-lg transition-all ${currentQrTab === 'coming_soon' ? 'bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}">Coming Soon QR Codes</button>
             </div>
 
             <div id="qr-tab-content" class="space-y-6">
@@ -280,14 +282,11 @@ export function toggleQrTab(tab) {
     // Highlight the active tab button
     const createBtn = document.getElementById('qr-tab-create');
     const historyBtn = document.getElementById('qr-tab-history');
-    if (createBtn && historyBtn) {
-        if (tab === 'create') {
-            createBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm";
-            historyBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
-        } else {
-            historyBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm";
-            createBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
-        }
+    const comingSoonBtn = document.getElementById('qr-tab-coming-soon');
+    if (createBtn && historyBtn && comingSoonBtn) {
+        createBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all " + (tab === 'create' ? 'bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300');
+        historyBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all " + (tab === 'history' ? 'bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300');
+        comingSoonBtn.className = "px-6 py-2.5 text-sm font-bold rounded-lg transition-all " + (tab === 'coming_soon' ? 'bg-white dark:bg-slate-700 text-brand-primary dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300');
     }
     renderSelectedQrTab();
 }
@@ -298,6 +297,8 @@ function renderSelectedQrTab() {
 
     if (currentQrTab === 'create') {
         renderCreateQrTab(contentContainer);
+    } else if (currentQrTab === 'coming_soon') {
+        renderComingSoonQrTab(contentContainer);
     } else {
         renderHistoryQrTab(contentContainer);
     }
@@ -359,6 +360,19 @@ function renderCreateQrTab(container) {
                 <input type="url" id="qr-input-url"
                     class="w-full p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition dark:text-white"
                     placeholder="https://example.com/or-youtube-link">
+            </div>
+
+            <!-- Allowed Courses Selection -->
+            <div id="qr-allowed-courses-section" class="space-y-2 mt-4">
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Allowed Courses (Students must be enrolled in at least one)</label>
+                <div class="max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50 dark:bg-slate-900 space-y-2">
+                    ${state.availableCourses.map(course => `
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition">
+                            <input type="checkbox" value="${course.id}" class="qr-allowed-course-checkbox w-4 h-4 text-brand-primary bg-white border-slate-300 rounded focus:ring-brand-primary">
+                            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">${course.title}</span>
+                        </label>
+                    `).join('')}
+                </div>
             </div>
 
             <!-- Progress Bar -->
@@ -455,6 +469,8 @@ export async function handleCreateQr() {
     const name = document.getElementById('qr-input-name').value.trim();
     if (!name) return showToast("Name is required", "error");
 
+    const allowedCourseIds = Array.from(document.querySelectorAll('.qr-allowed-course-checkbox:checked')).map(cb => cb.value);
+
     const sourceType = document.querySelector('input[name="qr-source-type"]:checked').value;
     let finalUrl = "";
     let fileType = "file";
@@ -521,6 +537,7 @@ export async function handleCreateQr() {
             url: finalUrl,
             type: sourceType,
             fileType,
+            allowedCourseIds,
             createdAt: new Date().toISOString(),
             creatorId: auth.currentUser ? auth.currentUser.uid : "unknown"
         });
@@ -761,7 +778,10 @@ async function renderHistoryQrTab(container) {
         const snap = await getDocs(query(collection(db, "qr_codes"), orderBy("createdAt", "desc")));
         window.allSavedQrCodes = [];
         snap.forEach(d => {
-            window.allSavedQrCodes.push({ id: d.id, ...d.data() });
+            const data = d.data();
+            if (!data.isComingSoon) {
+                window.allSavedQrCodes.push({ id: d.id, ...data });
+            }
         });
 
         displayQrHistoryList(window.allSavedQrCodes);
@@ -911,3 +931,422 @@ export function closeQrModal() {
     const modal = document.getElementById('qr-display-modal');
     if (modal) modal.classList.add('hidden');
 }
+
+// --- COMING SOON QR CODES IMPLEMENTATION ---
+
+export async function renderComingSoonQrTab(container) {
+    container.innerHTML = `
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 shadow-sm mb-8 space-y-6">
+            <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white mb-2">Create Coming Soon QR Code</h3>
+            <div>
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">QR Code Title / Name</label>
+                <input type="text" id="qr-coming-soon-name"
+                    class="w-full p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-light transition dark:text-white"
+                    placeholder="e.g. Lesson 5 Video Tutorial (Coming Soon)">
+            </div>
+            <button onclick="window.handleCreateComingSoonQr()" id="qr-coming-soon-generate-btn"
+                class="w-full bg-brand-primary text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-xl shadow-blue-200 dark:shadow-none active:scale-[0.98] flex justify-center items-center gap-2">
+                <i class="fas fa-qrcode"></i> Generate Coming Soon QR Code
+            </button>
+        </div>
+
+        <div class="flex items-center justify-between mb-4 gap-4">
+            <div class="relative flex-1 max-w-md">
+                <i class="fas fa-search absolute left-3 top-3.5 text-slate-400 text-sm"></i>
+                <input type="text" id="qr-coming-soon-search-input" oninput="window.filterComingSoonQrCodes(this.value)" placeholder="Search Coming Soon QR Codes..." class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:border-brand-primary outline-none transition focus:ring-2 focus:ring-brand-light dark:text-white">
+            </div>
+        </div>
+        <div id="qr-coming-soon-list" class="space-y-4">
+            <p class="text-slate-400 italic text-center py-8 font-bold">Loading Coming Soon QR Codes...</p>
+        </div>
+    `;
+
+    try {
+        const snap = await getDocs(query(collection(db, "qr_codes"), orderBy("createdAt", "desc")));
+        window.allComingSoonQrCodes = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.isComingSoon) {
+                window.allComingSoonQrCodes.push({ id: d.id, ...data });
+            }
+        });
+
+        displayComingSoonQrList(window.allComingSoonQrCodes);
+    } catch (e) {
+        console.error(e);
+        document.getElementById('qr-coming-soon-list').innerHTML = `<p class="text-red-500 text-center py-8">Error loading coming soon list: ${e.message}</p>`;
+    }
+}
+
+export function displayComingSoonQrList(items) {
+    const listDiv = document.getElementById('qr-coming-soon-list');
+    if (!listDiv) return;
+
+    if (items.length === 0) {
+        listDiv.innerHTML = `
+            <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-12 text-center border border-slate-100 dark:border-slate-700 shadow-sm">
+                <p class="text-slate-500 font-bold">No Coming Soon QR Codes found.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = "";
+    items.forEach(item => {
+        const scanUrl = `${window.location.origin}${window.location.pathname}?qrId=${item.id}`;
+        const dateStr = new Date(item.createdAt).toLocaleDateString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const safeName = item.name.replace(/'/g, "\\'");
+        
+        const isLinked = !!item.attachedItemId;
+        const statusBadge = isLinked
+            ? `<span class="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-widest flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Linked</span>`
+            : `<span class="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-widest flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Coming Soon</span>`;
+
+        let targetInfoHtml = "";
+        if (isLinked) {
+            targetInfoHtml = `<span class="truncate max-w-xs md:max-w-md"><i class="fas fa-video mr-1"></i> Destination Video: <a href="${item.url}" target="_blank" class="text-brand-primary hover:underline">${item.url}</a></span>`;
+        } else {
+            targetInfoHtml = `<span><i class="fas fa-hourglass-start mr-1"></i> Status: Pending Video Upload / Link</span>`;
+        }
+
+        html += `
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition duration-200">
+                <div class="flex-1 space-y-2 min-w-0">
+                    <div class="flex items-center gap-3">
+                        <h4 class="font-bold text-slate-900 dark:text-white text-lg truncate">${item.name}</h4>
+                        ${statusBadge}
+                    </div>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span><i class="far fa-calendar-alt mr-1"></i> ${dateStr}</span>
+                        ${targetInfoHtml}
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 w-full md:w-auto shrink-0 flex-wrap sm:flex-nowrap">
+                    <!-- Unlink Button (if linked) -->
+                    ${isLinked ? `
+                    <button onclick="window.unlinkComingSoonQr('${item.id}', '${item.attachedItemId}')" class="flex-1 sm:flex-none border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 p-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5" title="Unlink QR Code">
+                        <i class="fas fa-unlink"></i> Unlink
+                    </button>
+                    ` : ''}
+
+                    <!-- View QR Code Modal -->
+                    <button onclick="window.viewSavedQr('${safeName}', '${scanUrl}')" class="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-brand-primary dark:bg-slate-750 dark:text-white p-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+                        <i class="fas fa-qrcode"></i> Get QR
+                    </button>
+                    
+                    <!-- Delete QR Code -->
+                    <button onclick="window.deleteQrCode('${item.id}', '${safeName}')" class="flex-none bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-950/20 dark:text-red-400 p-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    listDiv.innerHTML = html;
+}
+
+export async function handleCreateComingSoonQr() {
+    const nameInput = document.getElementById('qr-coming-soon-name');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) return showToast("QR Code Title / Name is required", "error");
+
+    const btn = document.getElementById('qr-coming-soon-generate-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generating Coming Soon QR...';
+
+    try {
+        const docRef = await addDoc(collection(db, "qr_codes"), {
+            name,
+            url: "",
+            type: "link",
+            fileType: "coming_soon",
+            isComingSoon: true,
+            isLinked: false,
+            createdAt: new Date().toISOString(),
+            creatorId: auth.currentUser ? auth.currentUser.uid : "unknown"
+        });
+
+        showToast("Coming Soon QR Code created! Generating canvas...");
+
+        const scanUrl = `${window.location.origin}${window.location.pathname}?qrId=${docRef.id}`;
+        
+        await generateWatermarkedQr(scanUrl, name, (canvas) => {
+            showQrModal(name, scanUrl, canvas);
+            if (nameInput) nameInput.value = '';
+            const container = document.getElementById('qr-tab-content');
+            renderComingSoonQrTab(container);
+        });
+
+    } catch (e) {
+        console.error(e);
+        showToast("Error generating QR code: " + e.message, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+export async function unlinkComingSoonQr(qrId, itemId) {
+    if (!confirm("Are you sure you want to unlink this QR Code from its video? When scanned, it will show 'Coming Soon' again.")) return;
+    
+    try {
+        // 1. Update qr doc
+        await updateDoc(doc(db, "qr_codes", qrId), {
+            url: "",
+            fileType: "coming_soon",
+            attachedItemId: "",
+            courseId: null,
+            isLinked: false
+        });
+        
+        // 2. Remove from course_content
+        if (itemId) {
+            const contentRef = doc(db, "course_content", itemId);
+            const contentDoc = await getDoc(contentRef);
+            if (contentDoc.exists()) {
+                await updateDoc(contentRef, {
+                    qrCodes: arrayRemove(qrId)
+                });
+            }
+        }
+        
+        showToast("QR Code unlinked successfully!");
+        
+        // Invalidate cached QR map for course
+        const activeCourseId = state.activeCourseContext ? state.activeCourseContext.id : null;
+        if (state.cachedQrCodesByCourse && activeCourseId && state.cachedQrCodesByCourse[activeCourseId]) {
+            state.cachedQrCodesByCourse[activeCourseId] = null;
+        }
+        
+        // Refresh coming soon tab
+        if (currentQrTab === 'coming_soon') {
+            const container = document.getElementById('qr-tab-content');
+            renderComingSoonQrTab(container);
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Error unlinking QR Code: " + e.message, "error");
+    }
+}
+
+window.renderComingSoonQrTab = renderComingSoonQrTab;
+window.displayComingSoonQrList = displayComingSoonQrList;
+window.handleCreateComingSoonQr = handleCreateComingSoonQr;
+window.unlinkComingSoonQr = unlinkComingSoonQr;
+
+window.filterComingSoonQrCodes = function(term) {
+    if (!window.allComingSoonQrCodes) return;
+    const lower = term.toLowerCase();
+    const filtered = window.allComingSoonQrCodes.filter(qr => qr.name.toLowerCase().includes(lower));
+    displayComingSoonQrList(filtered);
+};
+
+// --- LINKING MODAL CODE ---
+let currentLinkingVideoId = null;
+let currentLinkingVideoTitle = null;
+let currentLinkingVideoUrl = null;
+let currentLinkingVideoType = null;
+let currentLinkingCourseId = null;
+
+export function openQrOptionsModal(itemId, itemTitle, itemUrl, itemType, courseId) {
+    currentLinkingVideoId = itemId;
+    currentLinkingVideoTitle = itemTitle;
+    currentLinkingVideoUrl = itemUrl;
+    currentLinkingVideoType = itemType;
+    currentLinkingCourseId = courseId;
+    
+    let modal = document.getElementById('qr-options-modal');
+    if (!modal) {
+        document.body.insertAdjacentHTML('beforeend', getQrOptionsModalHtml());
+        modal = document.getElementById('qr-options-modal');
+    }
+    
+    // Reset modal state
+    document.getElementById('coming-soon-select-container').classList.add('hidden');
+    document.getElementById('no-coming-soon-msg').classList.add('hidden');
+    document.getElementById('show-link-options-btn').classList.remove('hidden');
+    
+    modal.classList.remove('hidden');
+}
+window.openQrOptionsModal = openQrOptionsModal;
+
+export function closeQrOptionsModal() {
+    const modal = document.getElementById('qr-options-modal');
+    if (modal) modal.classList.add('hidden');
+}
+window.closeQrOptionsModal = closeQrOptionsModal;
+
+export function handleSelectCreateNewQr() {
+    closeQrOptionsModal();
+    window.createQrForExistingItem(
+        currentLinkingVideoId,
+        currentLinkingVideoTitle,
+        currentLinkingVideoUrl,
+        currentLinkingVideoType,
+        currentLinkingCourseId
+    );
+}
+window.handleSelectCreateNewQr = handleSelectCreateNewQr;
+
+export async function showLinkComingSoonOptions() {
+    const btn = document.getElementById('show-link-options-btn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Loading...';
+    btn.disabled = true;
+    
+    try {
+        const q = query(collection(db, "qr_codes"), where("isComingSoon", "==", true));
+        const snap = await getDocs(q);
+        const unlinked = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (!data.attachedItemId && !data.isLinked) {
+                unlinked.push({ id: d.id, ...data });
+            }
+        });
+        
+        btn.classList.add('hidden');
+        
+        if (unlinked.length > 0) {
+            const select = document.getElementById('coming-soon-qr-select');
+            select.innerHTML = unlinked.map(qr => `<option value="${qr.id}">${qr.name}</option>`).join('');
+            document.getElementById('coming-soon-select-container').classList.remove('hidden');
+        } else {
+            document.getElementById('no-coming-soon-msg').classList.remove('hidden');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Error loading Coming Soon QR codes: " + e.message, "error");
+    } finally {
+        btn.innerHTML = 'Choose from Coming Soon QR Codes';
+        btn.disabled = false;
+    }
+}
+window.showLinkComingSoonOptions = showLinkComingSoonOptions;
+
+export async function handleConfirmLinkComingSoon() {
+    const select = document.getElementById('coming-soon-qr-select');
+    const qrId = select.value;
+    if (!qrId) return showToast("Please select a QR code", "error");
+    
+    const confirmBtn = document.querySelector('#coming-soon-select-container button');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Linking...';
+    
+    try {
+        let finalUrl = currentLinkingVideoUrl;
+        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+            finalUrl = 'https://' + finalUrl;
+        }
+        
+        const lowerUrl = finalUrl.toLowerCase();
+        let fileType = 'link';
+        if (lowerUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/)) fileType = 'image';
+        else if (lowerUrl.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/)) fileType = 'video';
+        else if (lowerUrl.match(/\.(pdf)(\?.*)?$/)) fileType = 'pdf';
+        else if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$/)) fileType = 'office';
+        else if (lowerUrl.match(/\.(txt|md|js|css|html|json|csv)(\?.*)?$/)) fileType = 'text';
+        else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) fileType = 'youtube';
+        
+        // 1. Update QR Code document
+        await updateDoc(doc(db, "qr_codes", qrId), {
+            url: finalUrl,
+            fileType: fileType,
+            attachedItemId: currentLinkingVideoId,
+            courseId: currentLinkingCourseId || null,
+            isLinked: true
+        });
+        
+        // 2. Update Video Content document
+        await updateDoc(doc(db, "course_content", currentLinkingVideoId), {
+            qrCodes: arrayUnion(qrId)
+        });
+        
+        // Invalidate cached QR map for course
+        if (state.cachedQrCodesByCourse && currentLinkingCourseId && state.cachedQrCodesByCourse[currentLinkingCourseId]) {
+            state.cachedQrCodesByCourse[currentLinkingCourseId] = null;
+        }
+        
+        showToast("QR Code successfully linked to video!");
+        closeQrOptionsModal();
+        
+        // Refresh the video content dashboard
+        if (state.activeCourseContext && state.activeCourseContext.id) {
+            state.cachedCourseContent[state.activeCourseContext.id] = null;
+        }
+        if (state.activeTab) {
+            window.renderTab(state.activeTab);
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Error linking QR Code: " + e.message, "error");
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalText;
+    }
+}
+window.handleConfirmLinkComingSoon = handleConfirmLinkComingSoon;
+
+function getQrOptionsModalHtml() {
+    return `
+    <div id="qr-options-modal" class="fixed inset-0 bg-slate-900/60 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm shadow-2xl transition-opacity hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl p-6 relative">
+            <button onclick="window.closeQrOptionsModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-red-500 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white mb-6 text-center">QR Code Options</h3>
+            
+            <div class="space-y-4">
+                <!-- Option 1: Create New QR Code -->
+                <button onclick="window.handleSelectCreateNewQr()" class="w-full text-left p-4 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-brand-primary dark:hover:border-brand-primary hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-brand-primary dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm">Create New QR Code</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Generate a new QR code specifically for this video.</p>
+                    </div>
+                </button>
+                
+                <!-- Option 2: Link to Coming Soon QR Code -->
+                <div class="p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-3">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 dark:text-white text-sm">Link to Coming Soon QR Code</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Link this video to a previously created Coming Soon QR Code.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Coming Soon Dropdown -->
+                    <div id="coming-soon-select-container" class="mt-2 hidden">
+                        <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Select QR Code</label>
+                        <select id="coming-soon-qr-select" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:border-brand-primary dark:text-white transition">
+                        </select>
+                        <button onclick="window.handleConfirmLinkComingSoon()" class="w-full mt-3 bg-brand-primary hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md hover:shadow-brand-primary/20 flex justify-center items-center gap-1.5">
+                            <i class="fas fa-link"></i> Confirm Link
+                        </button>
+                    </div>
+                    
+                    <div id="no-coming-soon-msg" class="text-xs text-amber-500 font-medium italic mt-1 hidden">
+                        No unlinked Coming Soon QR Codes available.
+                    </div>
+                    
+                    <button id="show-link-options-btn" onclick="window.showLinkComingSoonOptions()" class="w-full mt-2 border border-dashed border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-primary hover:text-brand-primary font-bold py-2.5 rounded-xl text-xs transition flex justify-center items-center gap-1.5">
+                        Choose from Coming Soon QR Codes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
