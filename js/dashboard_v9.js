@@ -1273,11 +1273,73 @@ export async function handleSaveContent() {
     }
 }
 
+// Helper to execute Firestore batch operations in chunks (max 400 per batch)
+async function executeBatchOperations(operations) {
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+        const batch = writeBatch(db);
+        const chunk = operations.slice(i, i + CHUNK_SIZE);
+        chunk.forEach(op => op(batch));
+        await batch.commit();
+    }
+}
+
+// Helper to retrieve all descendants of a folder in BFS order (parents before children)
+async function getFolderDescendantsHierarchy(rootFolder, allSourceItems) {
+    const descendants = [];
+    let currentLevelFolders = [rootFolder];
+
+    while (currentLevelFolders.length > 0) {
+        const nextLevelFolders = [];
+        for (const parentFolder of currentLevelFolders) {
+            const childrenMap = new Map();
+
+            // 1. Check in-memory source items
+            (allSourceItems || []).filter(i => i.parentId === parentFolder.id).forEach(i => childrenMap.set(i.id, i));
+
+            // 2. Query Firestore directly by parentId to catch any orphaned child items
+            try {
+                const snap = await getDocs(query(collection(db, "course_content"), where("parentId", "==", parentFolder.id)));
+                snap.forEach(d => {
+                    if (!childrenMap.has(d.id)) {
+                        childrenMap.set(d.id, { id: d.id, ...d.data() });
+                    }
+                });
+            } catch (err) {
+                console.warn("Direct query by parentId failed, using cached items:", err);
+            }
+
+            for (const child of childrenMap.values()) {
+                descendants.push(child);
+                if (child.type === 'folder' || child.type === 'file_folder') {
+                    nextLevelFolders.push(child);
+                }
+            }
+        }
+        currentLevelFolders = nextLevelFolders;
+    }
+    return descendants;
+}
+
 export async function deleteContent(id, section) {
     if (!confirm("Delete this item? This cannot be undone.")) return;
     try {
-        await deleteDoc(doc(db, "course_content", id));
-        showToast("Item deleted");
+        const sourceCourseId = state.activeCourseContext?.id;
+        const allSourceItems = state.cachedCourseContent[sourceCourseId] || [];
+        const item = (state.currentItems && state.currentItems.find(i => i.id === id)) || allSourceItems.find(i => i.id === id) || { id };
+
+        const operations = [];
+        operations.push(batch => batch.delete(doc(db, "course_content", id)));
+
+        if (item.type === 'folder' || item.type === 'file_folder') {
+            const descendants = await getFolderDescendantsHierarchy(item, allSourceItems);
+            descendants.forEach(d => {
+                operations.push(batch => batch.delete(doc(db, "course_content", d.id)));
+            });
+        }
+
+        await executeBatchOperations(operations);
+        showToast("Item deleted", "success");
         state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
         _renderTabInternal(state.activeTab || 'content');
     } catch (e) {
@@ -1313,11 +1375,29 @@ export async function handleBulkAction(action) {
     if (action === 'delete') {
         if (!confirm(`Are you sure you want to delete ${state.selectedItems.length} selected items?`)) return;
         try {
-            const batch = writeBatch(db);
-            state.selectedItems.forEach(id => {
-                batch.delete(doc(db, "course_content", id));
-            });
-            await batch.commit();
+            const sourceCourseId = state.activeCourseContext?.id;
+            const allSourceItems = state.cachedCourseContent[sourceCourseId] || [];
+            const operations = [];
+            const deletedIds = new Set();
+
+            for (const id of state.selectedItems) {
+                if (!deletedIds.has(id)) {
+                    operations.push(batch => batch.delete(doc(db, "course_content", id)));
+                    deletedIds.add(id);
+                }
+                const item = (state.currentItems && state.currentItems.find(i => i.id === id)) || allSourceItems.find(i => i.id === id);
+                if (item && (item.type === 'folder' || item.type === 'file_folder')) {
+                    const descendants = await getFolderDescendantsHierarchy(item, allSourceItems);
+                    for (const d of descendants) {
+                        if (!deletedIds.has(d.id)) {
+                            operations.push(batch => batch.delete(doc(db, "course_content", d.id)));
+                            deletedIds.add(d.id);
+                        }
+                    }
+                }
+            }
+
+            await executeBatchOperations(operations);
             showToast("Selected items deleted.", "success");
             state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
             toggleSelectionMode();
@@ -1332,11 +1412,11 @@ export async function handleBulkAction(action) {
             const allSet = toUpdate.every(i => i[field] === true);
             const newValue = !allSet;
 
-            const batch = writeBatch(db);
+            const operations = [];
             state.selectedItems.forEach(id => {
-                batch.update(doc(db, "course_content", id), { [field]: newValue });
+                operations.push(batch => batch.update(doc(db, "course_content", id), { [field]: newValue }));
             });
-            await batch.commit();
+            await executeBatchOperations(operations);
             showToast(`Items ${newValue ? (action === 'hide' ? 'Hidden' : 'Locked') : (action === 'hide' ? 'Visible' : 'Unlocked')}`, "success");
             state.cachedCourseContent[state.activeCourseContext.id] = null; // Invalidate cache
             toggleSelectionMode();
@@ -1454,8 +1534,25 @@ async function loadDestinationFolders() {
             allItems = sn.docs.map(d => ({id: d.id, ...d.data()}));
             state.cachedCourseContent[courseId] = allItems; // Cache it
         }
+
+        // When moving within the same course, exclude selected folders and their descendants to prevent self-nesting
+        const excludedFolderIds = new Set();
+        if (window.bulkActionType === 'move' && courseId === state.activeCourseContext?.id) {
+            (state.selectedItems || []).forEach(id => excludedFolderIds.add(id));
+            let expanded = true;
+            while (expanded) {
+                expanded = false;
+                allItems.forEach(item => {
+                    if ((item.type === 'folder' || item.type === 'file_folder') && item.parentId && excludedFolderIds.has(item.parentId) && !excludedFolderIds.has(item.id)) {
+                        excludedFolderIds.add(item.id);
+                        expanded = true;
+                    }
+                });
+            }
+        }
+
         const folders = allItems
-            .filter(d => (d.type === 'folder' || d.type === 'file_folder') && d.section === section)
+            .filter(d => (d.type === 'folder' || d.type === 'file_folder') && d.section === section && !excludedFolderIds.has(d.id))
             .sort((a,b) => (a.order||0) - (b.order||0));
         folders.forEach(f => {
             folderSelect.innerHTML += `<option value="${f.id}">${f.title}</option>`;
@@ -1481,42 +1578,155 @@ export async function confirmDestinationAction() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
     try {
-        const toUpdate = state.currentItems.filter(i => state.selectedItems.includes(i.id));
-        const batch = writeBatch(db);
+        const sourceCourseId = state.activeCourseContext?.id;
+        const targetCourse = state.availableCourses.find(c => c.id === courseId);
+        const targetSubcode = (targetCourse && targetCourse.subcode && targetCourse.subcode !== 'null') ? targetCourse.subcode : null;
+
+        // Ensure we have all items from the source course
+        let allSourceItems = state.cachedCourseContent[sourceCourseId];
+        if (!allSourceItems || allSourceItems.length === 0) {
+            const q = query(collection(db, "course_content"), where("courseId", "==", sourceCourseId));
+            const snap = await getDocs(q);
+            allSourceItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.cachedCourseContent[sourceCourseId] = allSourceItems;
+        }
+
+        // Get all selected items
+        const selectedItemsList = (state.selectedItems || [])
+            .map(id => (state.currentItems && state.currentItems.find(i => i.id === id)) || allSourceItems.find(i => i.id === id))
+            .filter(Boolean);
+
+        if (selectedItemsList.length === 0) {
+            showToast("No items selected.", "error");
+            return;
+        }
+
+        // Safety check for move: prevent moving a folder into itself
+        if (action === 'move' && courseId === sourceCourseId && parentId) {
+            if (state.selectedItems.includes(parentId)) {
+                showToast("Cannot move a folder into itself.", "error");
+                return;
+            }
+        }
+
+        const operations = [];
 
         if (action === 'move') {
-            toUpdate.forEach(item => {
+            const movedItemIds = new Set();
+
+            for (const item of selectedItemsList) {
+                // Update top-level moved item
                 const ref = doc(db, "course_content", item.id);
-                batch.update(ref, {
+                operations.push(batch => batch.update(ref, {
                     courseId: courseId,
                     section: section,
-                    parentId: parentId
-                });
-            });
-            await batch.commit();
-            state.cachedCourseContent = {}; // Invalidate all course content caches (cross-course move)
-            showToast("Items moved successfully.", "success");
+                    parentId: parentId,
+                    subcourseCode: targetSubcode
+                }));
+                movedItemIds.add(item.id);
+
+                // If folder, find all descendants and move them too
+                if (item.type === 'folder' || item.type === 'file_folder') {
+                    const descendants = await getFolderDescendantsHierarchy(item, allSourceItems);
+
+                    // Prevent moving into a subfolder of itself
+                    if (courseId === sourceCourseId && parentId && descendants.some(d => d.id === parentId)) {
+                        showToast("Cannot move a folder into one of its subfolders.", "error");
+                        return;
+                    }
+
+                    for (const desc of descendants) {
+                        if (!movedItemIds.has(desc.id)) {
+                            const descRef = doc(db, "course_content", desc.id);
+                            operations.push(batch => batch.update(descRef, {
+                                courseId: courseId,
+                                section: section,
+                                subcourseCode: targetSubcode
+                                // parentId is preserved so inner folder structure remains intact
+                            }));
+                            movedItemIds.add(desc.id);
+                        }
+                    }
+                }
+            }
+
+            // If moving across courses, update any attached QR codes so they point to the target course
+            if (courseId !== sourceCourseId) {
+                try {
+                    const qrSnap = await getDocs(query(collection(db, "qr_codes"), where("courseId", "==", sourceCourseId)));
+                    qrSnap.forEach(qrDoc => {
+                        const qrData = qrDoc.data();
+                        if (qrData.attachedItemId && movedItemIds.has(qrData.attachedItemId)) {
+                            operations.push(batch => batch.update(doc(db, "qr_codes", qrDoc.id), {
+                                courseId: courseId
+                            }));
+                        }
+                    });
+                } catch (qrErr) {
+                    console.warn("Could not update QR codes for moved items:", qrErr);
+                }
+            }
+
+            await executeBatchOperations(operations);
+            state.cachedCourseContent = {}; // Invalidate all course caches
+            if (state.cachedQrCodesByCourse) state.cachedQrCodesByCourse = {};
+            showToast("Items and folder contents moved successfully.", "success");
+
         } else if (action === 'copy') {
-            toUpdate.forEach(item => {
+            const idMap = new Map(); // maps old document ID -> new document ID
+
+            for (const item of selectedItemsList) {
+                const newRef = doc(collection(db, "course_content"));
+                idMap.set(item.id, newRef.id);
+
                 const newData = { ...item };
                 delete newData.id;
+                delete newData.qrCodes;
+                delete newData.qrCount;
                 newData.courseId = courseId;
                 newData.section = section;
-                newData.parentId = parentId;
+                newData.parentId = parentId; // Under target folder (or Root)
+                newData.subcourseCode = targetSubcode;
                 newData.createdAt = new Date().toISOString();
-                const newRef = doc(collection(db, "course_content"));
-                batch.set(newRef, newData);
-            });
-            await batch.commit();
-            state.cachedCourseContent = {}; // Invalidate all course content caches (cross-course copy)
-            showToast("Items copied successfully.", "success");
+                newData.updatedAt = new Date().toISOString();
+
+                operations.push(batch => batch.set(newRef, newData));
+
+                // If folder, recursively copy all descendants with correct new parentIds
+                if (item.type === 'folder' || item.type === 'file_folder') {
+                    const descendants = await getFolderDescendantsHierarchy(item, allSourceItems);
+
+                    for (const desc of descendants) {
+                        const descNewRef = doc(collection(db, "course_content"));
+                        idMap.set(desc.id, descNewRef.id);
+
+                        const descData = { ...desc };
+                        delete descData.id;
+                        delete descData.qrCodes;
+                        delete descData.qrCount;
+                        descData.courseId = courseId;
+                        descData.section = section;
+                        // Map old parentId to the new parent ID generated for its parent folder
+                        descData.parentId = idMap.get(desc.parentId) || parentId;
+                        descData.subcourseCode = targetSubcode;
+                        descData.createdAt = new Date().toISOString();
+                        descData.updatedAt = new Date().toISOString();
+
+                        operations.push(batch => batch.set(descNewRef, descData));
+                    }
+                }
+            }
+
+            await executeBatchOperations(operations);
+            state.cachedCourseContent = {}; // Invalidate all course caches
+            showToast("Items and folder contents copied successfully.", "success");
         }
 
         closeDestinationModal();
         toggleSelectionMode();
     } catch (e) {
         console.error(e);
-        showToast("Error processing bulk action.", "error");
+        showToast("Error processing bulk action: " + (e.message || "Unknown error"), "error");
     } finally {
         closeDestinationModal();
         btn.disabled = false;

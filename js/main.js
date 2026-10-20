@@ -5,7 +5,7 @@ import { state } from "./state.js";
 import { initAuth, switchTab } from "./auth.js";
 import { renderAdminHome, renderApprovals, approveUser, rejectUser, openModalForCreate, openModalForEdit, handleSaveCourse, handleDeleteCourse, enterCourseLogic, deleteStudentAccount, toggleCourseModal, renderQrCodes, toggleQrTab, deleteQrCode, closeQrModal, showQrModal, handleCreateQr, openQrOptionsModal, closeQrOptionsModal, showLinkComingSoonOptions, handleConfirmLinkComingSoon, handleSelectCreateNewQr, unlinkComingSoonQr, handleCreateComingSoonQr } from "./admin.js?v=8";
 import { renderStudentDashboard } from "./student.js?v=2";
-import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal, toggleItemState, toggleSelectionMode, toggleCardSelection, handleBulkAction, openDestinationModal, closeDestinationModal, confirmDestinationAction } from "./dashboard_v9.js?v=FIX_FINAL_V2";
+import { renderTab, renderCourseSelection, openCourseDashboard, navigateToFolder, filterVideoItems, toggleContentModal, openContentModal, openEditContentModal, handleSaveContent, deleteContent, toggleSettingsModal, saveSettings, openFileViewer, closeFileViewer, _closeViewerInternal, toggleItemState, toggleSelectionMode, toggleCardSelection, handleBulkAction, openDestinationModal, closeDestinationModal, confirmDestinationAction } from "./dashboard_v9.js?v=FIX_FINAL_V3";
 import { showToast } from "./utils_v7.js";
 
 // --- EXPOSE GLOBAL FUNCTIONS (Bridge for HTML onclick) ---
